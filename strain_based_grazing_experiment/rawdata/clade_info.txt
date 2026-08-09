@@ -1,0 +1,23 @@
+Culture	Clade	Clumps	location
+LE17_10	Mae5	1	up & bottom
+LE17_20	Mae8	3	up & bottom
+LE18_13.4	Mfl_ae1	NA	NA
+LE18_22.4	Mae3_1	2	up & bottom
+LE19_10.1	Mae3_3	0	up & bottom
+LE19_114.1	Mae5	1	up & bottom
+LE19_12.2	Mfl_ae1	0	NA
+LE19_131.1	Mae1	0	up & bottom
+LE19_195.1	Mae3_1	2	bottom
+LE19_196.1	Mae5	2	up & bottom
+LE19_197.1	Mfl_ae1	2	bottom
+LE19_251.1	Mae3_3	0	bottom
+LE19_282.1	Mae3_3	0	bottom
+LE19_338.1	Mfl_ae3	3	up & bottom
+LE19_388.1	Mfl_ae3	2	up & bottom
+LE19_4.1	Mae5	1	up & bottom
+LE19_41.2	Mae3_3	0	bottom
+LE19_55.1	Mfl_ae1	0	bottom
+LE19_8.1	Mae8	3	bottom
+LE19_84.1	Mae4	0	bottom
+LE19_98.1	Mfl_ae1	1	up & bottom
+LE3	Mae1	NA	NA

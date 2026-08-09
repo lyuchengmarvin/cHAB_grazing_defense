@@ -1,0 +1,690 @@
+---
+title: "Mussel Exp Log"
+author: "Yu-Cheng Marvin Lin and Dylan Baker"
+date: "02-22-23"
+output: html_document
+---
+
+```{r setup}
+library(rstatix)
+library(ggpubr)
+library(tidyverse)
+library(lubridate)
+library(glue)
+library(readxl)
+library(googlesheets4)
+source("functions.R")
+```
+
+# Preparing data for feeding rates calculation
+
+## Import raw data
+
+This script analyzes the raw data from the quagga mussel grazing experiments that measured the effect of a single *Microcystis* strain on mussel feeding rates and selectivity. The phytoplankton abundance change was measured by Fluoroprobe, which is capable of discerning among phytoplankton groups based on their specific composition of photosynthetic pigments. In this case, the green alga, *Chlamydomonas oblonga*, and *Microcystis* in the same food mixture were detected as the Green Algae and Bluegreen categories, respectively. 
+
+```{r warning=FALSE}
+#Load metadata and experimental log
+map <- read_excel("rawdata/metadata_exp_log.xlsx",
+                  col_types = c('text','text','numeric','numeric','numeric','text','date','text','date','numeric','text')) %>%
+  rowwise() %>%
+  mutate(Treatment = str_to_title(Treatment),
+         Date = format(Date,"%m-%d-%Y"),
+         end_time = format(end_time,'%H:%M')) %>%
+         unite(final_read, Date, end_time,sep = ' ', remove = F) %>%
+  mutate(final_read = mdy_hm(final_read)) %>%
+  filter(!is.na(end_time))
+
+#Import Fluoroprobe readings from the quagga mussel grazing experiments based on Microcystis strains
+file_list <- list.files(path = "rawdata/",
+                        full.names = TRUE, ignore.case = TRUE, pattern = "mussel_feeding.*xlsx$")
+
+raw_data <- file_list %>%
+  map_df(~read_data(.))
+
+fp_data <-  raw_data %>%
+  # rename the Chlamydomonas and Microcystis categories
+  rename("blugrn" = Bluegreen,
+         "time" = `Date/Time`,
+         "grn" = `Green Algae`,
+         "total_chla" = `Total conc.`) %>%
+  mutate(dd = lubridate::decimal_date(time),
+         Date = format(time,"%m-%d-%Y"),
+         Treatment = str_remove_all(Treatment, ' '),
+         Treatment = str_to_title(Treatment),
+         Culture = str_replace_all(Culture, '-', '_')) %>%
+  pivot_longer(cols = c(blugrn,grn,total_chla), 
+               names_to = 'category', values_to = 'chla') #This step will help later in rate calculations.
+#Take the average of the technical repeats to represent one sample since Fluoroprobe takes multiple readings of the same sample.
+fp_summary <- fp_data %>%
+  group_by(Treatment, Timepoint, Date, category) %>%
+  dplyr::summarise(across(c(chla, time), list(avg = mean, sd = sd), .names = "{.fn}_{.col}")) %>%
+  select(-c(sd_time)) %>%
+  ungroup() %>%
+  inner_join(map)
+
+#T0 is reset to when mussels extended their suphons, indicating filtering behavior
+t0_correct <- filter(fp_summary, Timepoint %in% c("T0","T1"), Date > '03-07-23') %>%
+  group_by(Treatment, Culture, Date, category) %>%
+  filter(n() > 1) %>% #There are a couple of timepoints without a T0
+  mutate(T0_diff = avg_time[Timepoint == "T1"] - avg_time[Timepoint == "T0"]) %>%
+  filter(Timepoint == 'T0') %>%
+  mutate(t0_correction = case_when(samp_regime == '30min' ~ T0_diff - 30,
+                                   T ~ T0_diff - 15),
+         avg_time = avg_time + t0_correction) %>%
+  ungroup() %>%
+  select(- c(T0_diff, t0_correction)) 
+                     
+full_data <- rbind(filter(fp_summary,Timepoint != 'T0'), t0_correct) %>%
+  group_by(Treatment, Culture, Date) %>%
+  mutate(
+    avg_time = ifelse(Timepoint == 'TF', avg_time[avg_time == max(avg_time[avg_time != max(avg_time)])] + 2, avg_time),
+    begin = min(avg_time),
+    read_interval = interval(ymd_hms(begin), ymd_hms(avg_time)),
+    hours = int_length(read_interval) / as.numeric(dhours(1)),
+    #Get time between each read
+    source = case_when(Timepoint == "TF" ~ "Mixed", #Water column is during the experiment while mixed is the final reading.
+                       T ~ "Water Column")
+  ) %>%
+  separate(
+    Treatment,
+    into = c("Replicate", "Treatment"),
+    remove = TRUE,
+    sep = "(?<=R\\d)",
+    fill = "left"
+  ) %>% #Get replicate info from treatment names
+  ungroup() %>%
+  select(-c(begin, read_interval)) %>%
+  filter(category != "total_chla") %>% #We only want the individual channel data
+  mutate(
+    Treatment = case_when((Treatment == "Chlamy" |
+                             Treatment == "Nmc" | Treatment == "Nmcc") ~
+                            "C. oblonga no mussel",
+                          (Treatment == "Mixed" |
+                             Treatment == "Nmm") ~
+                            glue("C. oblonga + ", "{Culture}", " no mussel"),
+                          Treatment == "nc" ~
+                            "10-day old C. oblonga",
+                          Treatment == "oc" ~
+                            "60-day old C. oblonga",
+                          (Treatment == "mixed" |
+                             Treatment == "m") ~
+                            glue("C. oblonga + ", "{Culture}"),
+                          (Treatment == "chlamy" |
+                              Treatment == "chlamymixed" | Treatment == "c") &
+                            acc_to == "mixed"  ~ glue("C. oblonga ATM"),
+                          #Acclimated to mixed culture
+                          Treatment == "chlamy" &
+                            #Acclimated to chlamy only
+                            acc_to == "chlamy"  ~ glue("C. oblonga ATC"),
+                          acc_to == "axenic" ~ glue("Axenic " , "{Culture}"),
+                          acc_to == "xenic" ~ glue("Xenic " , "{Culture}"),
+                          Treatment == "Nma" ~ glue("Axenic ", "{Culture}", " no mussel"),
+                          Treatment == "Nmx" ~ glue("Xenic ", "{Culture}", " no mussel"),
+                          T ~ NA
+    )
+  )
+
+```
+
+## Import ash-free dry weight for feeding rate normalization
+
+Mussels feeding rates vary based on their size and weight (Xia et al., 2021). To control this effect in our experiments, we measured ash-free dry weight (AFDW) for each mussel every experiment. However, because we use the same batch of mussels over the course of the experiment, we only sacrifice them after the full experiment ended. During the experiment, we measured the mussel length. After the mussels were sacrificed and weighted, we then estimated AFDW based on a regression line built based on the mussel length and AFDW. The AFDW of the two mussels in the same beaker were then summed to represent the grazing pressure from the whole beaker.
+
+```{r Mussel AFDW}
+#Import mussel weight and length data
+mussel_info <- read_csv("rawdata/mussel_DW.csv") %>%
+  mutate(GDW = gut_dry_mass - capsule_mass,
+         PAW = gut_pa_mass - capsule_mass,
+         AFDW = GDW - PAW,
+         combust_eff = AFDW/GDW,
+         batch = as.integer(batch)) %>%
+  filter(combust_eff > 0.79)
+
+#Linear regression of AFDW and GDW of mussel tissue and shell-length
+AFDW_lm <- lm(AFDW ~ mussel_length*batch, data = mussel_info)
+GDW_lm <- lm(GDW ~ mussel_length, data = mussel_info)
+summary(AFDW_lm) #Adjusted R^2 0.7969 3.85e-07
+summary(GDW_lm) #Adjusted R^2 0.8064 2.602e-07
+
+mussel_info$AFDW_lm <- AFDW_lm$fitted.values
+mussel_info$GDW_lm <- GDW_lm$fitted.values
+
+#Check for normality
+shapiro_test(mussel_info$AFDW)
+shapiro_test(mussel_info$GDW)
+shapiro_test(mussel_info$mussel_length)
+ggqqplot(mussel_info$mussel_length)
+
+#Check residuals vs fitted plot
+plot(lm(AFDW ~ mussel_length, data = mussel_info))
+plot(lm(GDW ~ mussel_length, data = mussel_info))
+plot(lm(GDW ~ PAW, data = mussel_info))
+
+AFDW_plot <- ggplot(mussel_info, aes(x = mussel_length, y = AFDW, color = as.character(batch))) +
+  geom_point(aes(group = batch)) +
+  geom_smooth(aes(group = batch), method = "lm",
+              formula = y~x, level = 0.95, alpha = .15) +
+  scale_color_manual(values =  c("1" = 'royalblue1', "2" = "black"),
+                     labels = c("1" = "WE4 Mussels",
+                                "2" = "WE6 Mussels"),
+                     "Batch"
+                    )+
+  labs(y = "Ash-Free Dry Weight (mg)",
+       x = "Mussel Shell Length (mm)") +
+  stat_regline_equation(label.y = c(19,18)) +
+  stat_cor(method = "pearson",
+    aes(label = paste(after_stat(rr.label), after_stat(p.label), sep = "~`,`~"))) + 
+  theme_pubclean()+
+  theme(plot.title= element_text(size=15,color='black',hjust=0.39,face = "bold"),
+        axis.line = element_line(linewidth=0, colour = "black"),
+        axis.ticks = element_line(linewidth=1, colour = "black"),
+        axis.text.y = element_text(hjust = 0,size=10,color='black',face = "bold"),
+        axis.text.x = element_text(hjust = 0.5,size=10,color='black',face = "bold"),
+        axis.title = element_text(size=15,color='black',face = "bold"),
+        panel.background = element_rect(fill = "grey100"),
+        panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+        legend.title = element_text(size=10,color='black',hjust=0.5, face = "bold"),
+        legend.position = 'right',
+        panel.grid.major = element_blank())
+
+GDW_plot <- ggplot(mussel_info, aes(x = mussel_length, y = GDW)) +
+  geom_point() +
+  #coord_cartesian(expand = .1) +
+  geom_smooth(method = "lm",
+              formula = y~x, color = "black", level = 0.95, alpha = .15) +
+  labs(y = "Mussel Tissue Dry Weight (mg)",
+       x = "Mussel Shell Length (mm)") +
+  stat_regline_equation(label.y = 21) +
+  stat_cor(method = "pearson",
+    aes(label = paste(after_stat(rr.label), after_stat(p.label), sep = "~`,`~"))) + 
+  theme_pubclean()+
+  theme(plot.title= element_text(size=15,color='black',hjust=0.39,face = "bold"),
+        axis.line = element_line(linewidth=0, colour = "black"),
+        axis.ticks = element_line(linewidth=1, colour = "black"),
+        axis.text.y = element_text(hjust = 0,size=10,color='black',face = "bold"),
+        axis.text.x = element_text(hjust = 0.5,size=10,color='black',face = "bold"),
+        axis.title = element_text(size=15,color='black',face = "bold"),
+        panel.background = element_rect(fill = "grey100"),
+        panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+        legend.title = element_text(size=10,color='black',hjust=0.5, face = "bold"),
+        legend.position = 'right',
+        panel.grid.major = element_blank())
+
+ggsave('figures/mussel length to AFDW relationship.png', AFDW_plot, width = 8, height =6, dpi = 300)
+
+AFDW_plot; GDW_plot
+```
+
+```{r}
+# Put the data together
+feeding_data <- rbind(filter(fp_summary,Timepoint != 'T0'), t0_correct) %>%
+  group_by(Treatment, Culture, Date, category) %>%
+  mutate(
+    avg_time = case_when(Timepoint == 'TF' ~ avg_time[avg_time == max(avg_time[avg_time != max(avg_time)])] + 2,
+                         T ~ avg_time), #Correct TF timepoint
+    begin = min(avg_time),
+    read_interval = begin %--% avg_time,
+    hours = as.numeric(as.duration((read_interval) / dhours(1))),
+    #Get time between each read
+    source = case_when(Timepoint == "TF" ~ "Mixed", #Water column is during the experiment while mixed is the final reading.
+                       T ~ "Water Column")
+  ) %>%
+  separate(
+    Treatment,
+    into = c("Replicate", "Treatment"),
+    remove = TRUE,
+    sep = "(?<=R\\d)",
+    fill = "left"
+  ) %>%
+  dplyr::mutate(
+    Treatment = case_when((Treatment == "Chlamy" |
+                             Treatment == "Nmc" | Treatment == "Nmcc") ~
+                            "C. oblonga no mussel",
+                          (Treatment == "Mixed" |
+                             Treatment == "Nmm") ~
+                            glue("C. oblonga + ", "{Culture}", " no mussel"),
+                          Treatment == "nc" ~
+                            "10-day old C. oblonga",
+                          Treatment == "oc" ~
+                            "60-day old C. oblonga",
+                          (Treatment == "mixed" |
+                             Treatment == "m") ~
+                            glue("C. oblonga + ", "{Culture}"),
+                          (Treatment == "chlamy" |
+                              Treatment == "chlamymixed" | Treatment == "c") &
+                            acc_to == "mixed"  ~ "C. oblonga ATM",
+                          #Acclimated to mixed culture
+                          Treatment == "chlamy" &
+                            #Acclimated to chlamy only
+                            acc_to == "chlamy"  ~ glue("C. oblonga ATC"),
+                          acc_to == "axenic" ~ glue("Axenic " , "{Culture}"),
+                          acc_to == "xenic" ~ glue("Xenic " , "{Culture}"),
+                          Treatment == "Nma" ~ glue("Axenic ", "{Culture}", " no mussel"),
+                          Treatment == "Nmx" ~ glue("Xenic ", "{Culture}", " no mussel"),
+                          T ~ NA
+    )
+  ) %>%
+  group_by(Replicate, Treatment, Culture, Date) %>%
+  filter(Timepoint == 'T0' |
+         avg_time == max(avg_time) | #highest time, should be TF
+         avg_time == max(avg_time[avg_time != max(avg_time)])) %>%  #second highest time
+  dplyr::mutate(V = Volume *1000,
+         VFWC = case_when(Timepoint == 'T0' ~ 25,
+                          Timepoint == 'T1' ~ 50,
+                          Timepoint == 'T2' ~ 75,
+                          Timepoint == 'T3' ~ 100,
+                          Timepoint == 'T4' ~ 125,
+                          Timepoint == 'T5' ~ 150,
+                          T ~ NA),
+         VFWC = ifelse(is.na(VFWC), VFWC[avg_time == max(avg_time[avg_time != max(avg_time)])] + 25, VFWC),
+         VFM = V - VFWC) %>%
+  dplyr::mutate(M1AFDW = case_when(batch == 1 ~ -32.5494 + 2.1535*M1,
+                            batch == 2 ~ -4.7114 + 0.86974*M1,
+                              T ~ NA),
+         M2AFDW = case_when(batch == 1 ~ -32.5494 + 2.1535*M2,
+                            batch == 2 ~ -4.7114 + 0.86974*M2,
+                              T ~ NA),
+         total_AFDW = M1AFDW + M2AFDW,
+         total_C = total_AFDW * 0.524,
+         percent_C = total_C/total_AFDW) %>%
+  ungroup()
+```
+
+# Calculating feeding rates
+
+The feeding rates followed the calculation described in Vanderploeg et al. (2001). C is the mean Chl a concentration in the water column at the end of the experiment in control containers, Z is the Chl a concentration in the water column of an experimental container at the end of the experiment, V is the volume of water in the container during the experiment, n is the number of mussels, and t is the duration of the experiment.
+
+```{r}
+#Calculations for control data to get final water column and mixed measurements to correct for settling and death in mussel grazer experiments 
+control_data <- filter(feeding_data, str_detect(Treatment, "no mussel")) %>%
+  select(Treatment,Timepoint, Date, Culture, batch, category, avg_chla, avg_time, V, VFWC, VFM, hours) %>%
+  group_by(Culture,Timepoint,Treatment, Date, batch, category) %>%
+  summarise(across(everything(), mean)) %>%
+  group_by(Culture, Date, Treatment, batch, category) %>%
+  mutate(C0 = avg_chla[avg_time == min(avg_time)], #Initial control measurement time T0.
+         CFWC = avg_chla[avg_time == max(avg_time[avg_time != max(avg_time)])], #Final control measurement before mixing
+         CFM = avg_chla[avg_time == max(avg_time)]) %>%#Final control measurement mixed
+  filter(VFM == min(VFM)) %>% #Filter out unneeded rows
+  dplyr::mutate(CFMx = (VFM/V)*CFM+(VFWC/V)*CFWC,
+                ctrl = case_when(str_detect(Treatment,"\\+") ~ "mixed",
+                                 str_detect(Treatment, "Axenic") ~ "axenic",
+                                 str_detect(Treatment, "Xenic") ~ "xenic",
+                                 T ~ 'chlamy')) %>% #Control final corrected for sample volume removed
+  ungroup() %>%
+  dplyr::select(-c(Timepoint,Treatment,avg_chla,V,VFM,VFWC))
+
+#Calculations for experimental data to get final water column and mixed measurements
+exp_data <- filter(feeding_data, !str_detect(Treatment, "no mussel")) %>%
+  select(Treatment,Replicate, Timepoint, Date, Culture, batch, category, total_AFDW, avg_chla, avg_time, V, VFM, VFWC) %>%
+  group_by(Treatment,Replicate, Culture, Date, batch, category) %>%
+  mutate(Z0 = avg_chla[avg_time == min(avg_time)], #Initial control measurement time T0.
+         ZFWC = avg_chla[avg_time == max(avg_time[avg_time != max(avg_time)])], #Final control measurement before mixing
+         ZFM = avg_chla[avg_time == max(avg_time)]) %>% #Final control measurement mixed
+  filter(VFM == min(VFM)) %>% #Filter out unneeded rows
+  mutate(ZFMx = (VFM/V)*ZFM+(VFWC/V)*ZFWC, #Control final corrected for sample volume removed
+         ZavWC = (Z0-ZFWC)/log(Z0/ZFWC), #Average concentration chla in the water column
+         ZavM = (Z0-ZFM)/log(Z0/ZFM),
+         ctrl = case_when(str_detect(Treatment,"\\+") ~ "mixed",
+                                 str_detect(Treatment, "Axenic") ~ "axenic",
+                                 str_detect(Treatment, "Xenic") ~ "xenic",
+                                 T ~ 'chlamy')) %>% #Control final corrected for sample volume removed) %>% #Average concentration of bluegreens after mixing
+  select(-c(Timepoint, avg_chla, avg_time))
+
+#Combine the experimental and control data to caluclate feeding and clearance rates
+combined_data <-merge(exp_data, control_data,by= c('Culture', 'Date', 'category', 'batch' ,'ctrl')) %>% #Merge control data with exp data.
+  mutate(FR = (V/(total_AFDW*hours))*(log(Z0)-log(ZFWC)+log(CFWC)-log(C0)), #Clearance rate on amount removed, includes correction
+         FI = (V/(total_AFDW*hours))*(log(Z0)-log(ZFMx)+log(CFMx)-log(C0)), #Clearance rate on amount ingested, includes correction
+         CR = ZavWC*FR/1000,#Capture rate
+         IR = ZavM*FI/1000, #Ingestion rate
+         ) %>%
+  filter(!((category == 'blugrn' | category == 'total_chla') & ctrl == 'chlamy'),
+         !(category == 'grn' & ctrl %in% c('axenic', 'xenic')))#Chlamy treatment does not have any bluegreens
+
+#Change all Inf, NA, NaN values to 0, as these represent treatments where either bluegreen or green were not present. E.g. C. oblonga controls
+combined_data[sapply(combined_data, is.infinite)] <- NA
+combined_data[sapply(combined_data, is.nan)] <- NA
+
+write.table(combined_data, file = "output/LE_QMF_23.out.txt", sep = "\t", row.names = F)
+```
+
+# Visualizing results per strain
+
+```{r}
+combined_data <- read.table("output/LE_QMF_23.out.txt", sep = "\t", header = T)
+# extract strain
+strain_list <- c('LE18_22.4', 'LE19_131.1', 'LE19_196.1','LE19_251.1','LE19_197.1','LE19_195.1')
+strain_data <- combined_data %>%
+  filter(Culture %in% strain_list) %>%
+  filter(category != 'total_chla')
+
+# plot FI comparison across selected strains
+FI_plot <- ggplot(strain_data , aes(x = ctrl, y = FI, fill = category)) +
+  geom_boxplot(aes(fill = category)) +
+  facet_wrap(~Culture) +
+  labs(title = " Comparison Across Selected Strains",
+       x = "Strain",
+       y = "Clearance Rate on Amount Ingested (mL/mg AFDW/h)") +
+  scale_fill_manual(values = c("blugrn" = "cadetblue", "grn" = "chartreuse4")) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "top")
+FI_plot
+```
+
+# Examining potential confounds
+
+## Experimental time
+
+```{r}
+## Check time distribution
+hist(combined_data$hours)
+## Check time relationship with FR and FI
+
+exp_dur_fdr_mod <- lm(FI ~ hours, data = combined_data)
+shapiro.test(residuals(exp_dur_fdr_mod))
+cor.test(combined_data$FI, combined_data$hours,method = "spearman")
+
+
+ggplot(combined_data, aes(x = hours, y = FI)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE, color = "grey40") +
+  labs(title = NULL,
+       x = "Total length of experimental duration (hrs)",
+       y = "Total amount of phytoplankton \n ingested by mussels (mL/mg/h)") +
+  theme_pubclean()+
+  theme(plot.title= element_text(size=12,color='black',hjust=0.39,face = "bold"),
+        axis.line = element_line(linewidth=0, colour = "black"),
+        axis.ticks = element_line(size=1, colour = "black"),
+        axis.text.y = element_text(hjust = 0,size=10,color='black',face = "bold"),
+        axis.text.x = element_text(hjust = 0.5,size=10,color='black',face = "bold"),
+        axis.title = element_text(size=12,color='black',face = "bold"),
+        strip.text = element_text(size = 12, color = 'black',face = "bold"),
+        strip.background = element_rect(fill = "grey100", 
+                                        color = NA, linewidth = 1),
+        panel.background = element_rect(fill = "grey100"),
+        panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+        legend.title = element_text(size=12,color='black',hjust=0, face = "bold"),
+        legend.text = element_text(size=10,color='black',hjust=0),
+        legend.position = 'right',
+        panel.grid.major = element_blank())
+ggsave("figures/supplFig_FI_experiment_duration.png", width = 8, height =4, dpi = 300)
+```
+
+## Experimental date
+
+```{r}
+# Convert Date to Julian Days
+date_fdr <- combined_data %>%
+  select(Date, FI, FR) %>%
+  separate(Date, into = c("Month","Day","Year"),sep = "-") %>%
+  mutate(monthday = as.integer(paste0(Month, Day))/100)
+## Experimental Date to feeding rates
+
+date_fdr_mod = lm(FI ~ monthday, data = date_fdr)
+summary(date_fdr_mod)
+
+ggplot(date_fdr, aes(x = monthday, y = FI)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE, color = "grey40") +
+  labs(title = NULL,
+       x = "Experiment Date (Month)",
+       y = "Total amount of phytoplankton \n ingested by mussels (mL/mg/h)") +
+  theme_pubclean()+
+  theme(plot.title= element_text(size=12,color='black',hjust=0.39,face = "bold"),
+        axis.line = element_line(linewidth=0, colour = "black"),
+        axis.ticks = element_line(size=1, colour = "black"),
+        axis.text.y = element_text(hjust = 0,size=10,color='black',face = "bold"),
+        axis.text.x = element_text(hjust = 0.5,size=10,color='black',face = "bold"),
+        axis.title = element_text(size=12,color='black',face = "bold"),
+        strip.text = element_text(size = 12, color = 'black',face = "bold"),
+        strip.background = element_rect(fill = "grey100", 
+                                        color = NA, linewidth = 1),
+        panel.background = element_rect(fill = "grey100"),
+        panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+        legend.title = element_text(size=12,color='black',hjust=0, face = "bold"),
+        legend.text = element_text(size=10,color='black',hjust=0),
+        legend.position = 'right',
+        panel.grid.major = element_blank()) 
+ggsave('figures/supplFig_FI_experiment_date.png', width = 8, height =4, dpi = 300)
+```
+
+## Sedimentation rate
+
+```{r}
+sed_rate <- combined_data %>%
+  mutate(contrl_sed_rate = (CFMx-CFWC)/hours,
+         quagga_sed_rate = (ZFMx-ZFWC)/hours) %>%
+  select(Date, Culture, category, ctrl, Replicate, FI, FR, contrl_sed_rate, quagga_sed_rate) %>%
+  filter(ctrl %in% c('mixed', 'chlamy')) 
+ggplot(sed_rate %>% 
+         filter(category != "total_chla") %>%
+         filter(ctrl == 'mixed'), aes(x = contrl_sed_rate, y = quagga_sed_rate, color = category)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE) +
+  labs(title = "Sedimentation Rate Comparison",
+       x = "Control Sedimentation Rate (mg/h)",
+       y = "Quagga Sedimentation Rate (mg/h)") +
+  scale_color_manual(values = c("blugrn" = "cadetblue", "grn" = "chartreuse4", "total_chla" = "grey40")) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "top")
+
+sed_long_rate <- sed_rate %>% 
+         filter(category != "total_chla") %>%
+         filter(ctrl == 'mixed')%>%
+  pivot_longer(cols = c(contrl_sed_rate, quagga_sed_rate), 
+               names_to = "sed_rate_type", 
+               names_pattern = "(.*)_sed_rate", 
+               values_to = "sed_rate") %>%
+  mutate(high_labels = case_when(sed_rate > 0.2 & category == 'blugrn'~ Culture,
+                                  T ~ NA))
+
+ggplot(sed_long_rate %>% 
+         filter(sed_rate_type == "contrl"), 
+       aes(x = sed_rate, y = FI, color = category)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE) +
+  facet_wrap(~category, nrow = 2,
+             labeller = labeller(category = c("blugrn" = "Microcystis strain",
+                                                   "grn" = "Preferred prey"))) +
+  ggrepel::geom_text_repel(aes(label = high_labels), size = 2, max.overlaps = 10) +
+  labs(title = NULL,
+       x = "Sedimentation rate \n in mussel-free controls (mg/hr)",
+       y = "Amount ingested by mussels \n in mussel-grazing beakers (mL/mg/hr)") +
+  scale_color_manual(values = c("blugrn" = "cadetblue",
+                                "grn" = "chartreuse4"),
+                     labels = c("blugrn" = expression(italic("Microcystis")~"strain"),
+                                "grn" = "Preferred prey"),
+                     c("category" = "Food category")) +
+  theme_pubclean()+
+  theme(plot.title= element_text(size=12,color='black',hjust=0.39,face = "bold"),
+        axis.line = element_line(linewidth=0, colour = "black"),
+        axis.ticks = element_line(size=1, colour = "black"),
+        axis.text.y = element_text(hjust = 0,size=10,color='black',face = "bold"),
+        axis.text.x = element_text(hjust = 0.5,size=10,color='black',face = "bold"),
+        axis.title = element_text(size=12,color='black',face = "bold"),
+        strip.text = element_text(size = 12, color = 'black',face = "bold"),
+        strip.background = element_rect(fill = "grey100", 
+                                        color = NA, linewidth = 1),
+        panel.background = element_rect(fill = "grey100"),
+        panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+        legend.title = element_text(size=12,color='black',hjust=0, face = "bold"),
+        legend.text = element_text(size=10,color='black',hjust=0),
+        legend.position = 'right',
+        panel.grid.major = element_blank()) +
+  rotate_x_text(angle = 60)
+ggsave('figures/supplFig_FI_sedimentation_rate.png', width = 6, height =8, dpi = 300)
+```
+
+```{r}
+sed_FI_grn <- sed_rate %>% 
+                    filter(category != "total_chla") %>% 
+                    filter(ctrl == 'mixed') %>%
+                    filter(category == 'grn')
+sed_FI_blugrn <-sed_rate %>% 
+                    filter(category != "total_chla") %>% 
+                    filter(ctrl == 'mixed') %>%
+                    filter(category == 'blugrn')
+sed_FI_grn_mod <- lm(FI ~ contrl_sed_rate, data = sed_FI_grn)
+sed_FI_blugrn_mod <- lm(FI ~ contrl_sed_rate, data = sed_FI_blugrn)
+shapiro.test(residuals(sed_FI_grn_mod)); shapiro.test(residuals(sed_FI_blugrn_mod))
+cor.test(sed_FI_grn$FI, sed_FI_grn$contrl_sed_rate)
+
+cor.test(sed_FI_blugrn$FI, sed_FI_blugrn$contrl_sed_rate)
+
+summary(sed_FI_blugrn_mod)
+```
+
+```{r}
+# summary statistics for the samples
+IDM_summary <- combined_data %>%
+  # 6 ug/L of Microcystis is added and 9 ug/L total food source boosted the clearacne rate
+  filter(!(Culture == 'LE19_114.1' & Date == '04-04-2023' )) %>% 
+  # Weired increase in the bluegreen signal during the experiment
+  filter(!(Culture == 'LE19_196.1' & Date == '04-24-2023' )) %>%
+  #filter(ctrl != 'axenic' & ctrl != 'xenic') %>%
+  # extract words before " + " to get the algal species name
+  mutate(Algal_species= str_extract(Treatment, "^[^\\+]+")) %>%
+  select(Culture, Date, category, ctrl, Algal_species, Replicate, FR, FI, CR, IR) %>%
+  group_by(Culture, category, Algal_species, ctrl) %>%
+  summarise(across(c(FR, FI, CR, IR), list(avg = mean, sd = sd), .names = "{.fn}_{.col}")) %>%
+  pivot_longer(cols = c(
+    avg_FR, avg_FI, avg_CR, avg_IR,
+    sd_FR, sd_FI, sd_CR, sd_IR,
+  ), names_to = "metric",
+    values_to = "value") 
+
+# compare sample distributions of the mixed treatment and the chlamy control
+IDM_plot <- ggplot(IDM_summary %>%
+                     filter(str_detect(metric, 'avg_')) %>%
+                     filter(ctrl %in% c('mixed', 'chlamy')), 
+                   aes(x = ctrl, y = value, fill = category)) +
+  geom_boxplot(alpha = 0.5) +
+  facet_wrap(~metric, scales = 'free_y') +
+  labs(title = "Comparison of metrics of mussel feeding behaviors",
+       y = "Values",
+       x = "Treatment") +
+  scale_fill_manual(values = c("blugrn" = "cadetblue", "grn" = "chartreuse4")) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "top")
+
+# compare variation in FI between mixed and chlamy control
+IDM_sd_plot <- ggplot(IDM_summary %>%
+                     filter(str_detect(metric, 'sd_')) %>%
+                     filter(ctrl %in% c('mixed', 'chlamy')), 
+                   aes(x = ctrl, y = value, fill = category)) +
+  geom_boxplot() +
+  facet_wrap(~metric, scales = 'free_y') +
+  labs(title = "Comparison of Variation in FI",
+       x = "Standard Deviation",
+       y = "Treatment") +
+  scale_fill_manual(values = c("blugrn" = "cadetblue", "grn" = "chartreuse4")) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "top")
+
+IDM_plot; IDM_sd_plot
+```
+
+# Output a wide summary table
+
+Columns:
+1. grn_chlamy: the chlamy quagga control on that experiment date
+2. grn_mixed: the grn fp reading for the mixed treatement
+3. blugrn_mixed: the blugrn fp reading for the mixed treatment
+
+
+```{r}
+# summary statistics for the samples
+IDM_summary <- combined_data %>%
+  # 6 ug/L of Microcystis is added and 9 ug/L total food source boosted the clearacne rate
+  filter(!(Culture == 'LE19_114.1' & Date == '04-04-2023' )) %>% 
+  # Weired increase in the bluegreen signal during the experiment
+  filter(!(Culture == 'LE19_196.1' & Date == '04-24-2023' )) %>%
+  #filter(ctrl != 'axenic' & ctrl != 'xenic') %>%
+  # extract words before " + " to get the algal species name
+  mutate(Algal_species= str_extract(Treatment, "^[^\\+]+")) %>%
+  select(Culture, Date, category, ctrl, Algal_species, Replicate, FR, FI, CR, IR) %>%
+  group_by(Culture, category, Algal_species, ctrl) %>%
+  summarise(across(c(FR, FI, CR, IR), list(avg = mean, sd = sd), .names = "{.fn}_{.col}")) %>%
+  pivot_longer(cols = c(
+    avg_FR, avg_FI, avg_CR, avg_IR,
+    sd_FR, sd_FI, sd_CR, sd_IR,
+  ), names_to = "metric",
+    values_to = "value") 
+
+# compare sample distributions of the mixed treatment and the chlamy control
+IDM_plot <- ggplot(IDM_summary %>%
+                     filter(str_detect(metric, 'avg_')) %>%
+                     filter(ctrl %in% c('mixed', 'chlamy')), 
+                   aes(x = ctrl, y = value, fill = category)) +
+  geom_boxplot(alpha = 0.5) +
+  facet_wrap(~metric, scales = 'free_y') +
+  labs(title = "Comparison of metrics of mussel feeding behaviors",
+       y = "Values",
+       x = "Treatment") +
+  scale_fill_manual(values = c("blugrn" = "cadetblue", "grn" = "chartreuse4")) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "top")
+
+# load clade information for Microcystis strains
+clade_info <- read.table("rawdata/genome_metadata.txt", sep = "\t", header = T) %>% 
+  select(Culture, Clade)
+
+# merge clade information with summary data
+IDM_strain_summary <- IDM_summary %>%
+  left_join(clade_info, by = c("Culture" = "Culture"))%>%
+  # keep only the mixed treatments
+  filter(Algal_species == "C. oblonga ") %>%
+  filter(ctrl == 'mixed') %>%
+  filter(str_detect(metric, 'avg_')) %>%
+  select(-ctrl) %>%
+  # split the values up to bluegreens and greens
+  pivot_wider(names_from = category, values_from = value)
+
+IDM_green_baseline <- IDM_summary %>%
+  filter(ctrl == 'chlamy') %>%
+  filter(str_detect(metric, 'avg_')) %>%
+  select(-ctrl) %>%
+  pivot_wider(names_from = category, values_from = value) %>%
+  rename(grn_chlamy = grn)
+
+# Plot blugreen to green values by strain
+IDM_strain_plot <- ggplot(IDM_strain_summary, aes(x = grn, y = blugrn)) +
+  geom_point(aes(fill = Clade), size=3, alpha=0.7, color = "grey50", shape = 21) +
+  # customize colors
+  ggrepel::geom_text_repel(aes(label = Culture), max.overlaps = 20,
+                             size = 2, alpha = 0.8,fontface = 'bold', show.legend = F) +
+  scale_fill_manual(values = c('sienna2', 'lightblue2','lightgoldenrodyellow','grey60',
+                                 'lightpink4','plum3','palegreen3','lightblue4')) +
+  guides(fill = guide_legend(override.aes = list(shape = 21, size = 4))) +
+  # plot 1:1 line
+  geom_abline(intercept = 0, slope = 1, color = 'grey50',linetype = 'dashed') +
+  facet_wrap(~metric, scales = 'free') +
+  labs(title = "Comparison of metrics of mussel feeding behaviors by strain",
+       x = "Green Values",
+       y = "Bluereen Values") +
+  theme_pubclean()+
+  theme(plot.title= element_text(size=15,color='black',hjust=0.39,face = "bold"),
+        axis.line = element_line(linewidth=0, colour = "black"),
+        axis.ticks = element_line(linewidth=1, colour = "black"),
+        axis.text.y = element_text(hjust = 0,size=10,color='black',face = "bold"),
+        axis.text.x = element_text(hjust = 0.5,size=10,color='black',face = "bold"),
+        axis.title = element_text(size=15,color='black',face = "bold"),
+        panel.background = element_rect(fill = "grey100"),
+        panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+        legend.title = element_text(size=10,color='black',hjust=0.5, face = "bold"),
+        legend.position = 'right',
+        panel.grid.major = element_blank())
+
+ggsave('figures/IDM_feeding_metrics_comparison.png', IDM_strain_plot, width = 8, height =6, dpi = 300)
+
+
+IDM_strain_plot
+```
+
+
+```{r}
+IDM_summary_wide <- IDM_strain_summary %>%
+  pivot_wider(names_from = metric,
+              values_from = c(grn, blugrn,total_chla),
+              names_sep = "_mix_")
+write.table(IDM_summary_wide, file = "output/LE_QMF_23_IDM_trait_summary.out.txt", sep = "\t", quote = F, row.names = F)
+```
