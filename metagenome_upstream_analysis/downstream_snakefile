@@ -1,0 +1,272 @@
+## This is a snake file for downstream analysis of metagenomic data.
+import os
+import re
+import subprocess
+from snakemake.io import glob_wildcards
+from glob import glob
+import pandas as pd
+import time
+
+## wildcards
+# Samples waiting for processing from a project folder
+BASE_DIR = "data/decontam_fastqs/remaining/"
+wildcard_patterns = glob_wildcards(
+    BASE_DIR + "{sample_id}_{primer_seqid}_{slabel}_decon_R{direction}.fastq.gz")
+
+
+## global rules
+# rule run_recruitment_mapping:
+#     input:
+#         expand("/scratch/vdenef_root/vdenef0/lyucheng/ND_feed1819_metagenome/data/recruitment_map/just_genes/{sample_id}_{primer_seqid}_{slabel}_LE_pangenome_recruitment.id95.bam", 
+#             zip,
+#             sample_id=wildcard_patterns.sample_id,
+#             primer_seqid=wildcard_patterns.primer_seqid,
+#             slabel=wildcard_patterns.slabel)
+#     shell:
+#         """
+#         echo "Running recruitment mapping."
+#         """
+# rule run_filterBam:
+#     input:
+#         expand("/scratch/vdenef_root/vdenef0/lyucheng/ND_feed1819_metagenome/data/recruitment_map/just_genes/{sample_id}_{primer_seqid}_{slabel}_LE_pangenome_recruitment_filt99.cov50.bam", 
+#             zip,
+#             sample_id=wildcard_patterns.sample_id,
+#             primer_seqid=wildcard_patterns.primer_seqid,
+#             slabel=wildcard_patterns.slabel)
+#     shell:
+#         """
+#         echo "Running BAM filtering for all samples."
+#         """
+    
+# rule run_get_ref_freq:
+#     input:
+#         expand("data/recruitment_map/whole_contig/{sample_id}_{primer_seqid}_{slabel}_LE_pangenome_recruitment.bam", 
+#             zip,
+#             sample_id=wildcard_patterns.sample_id,
+#             primer_seqid=wildcard_patterns.primer_seqid,
+#             slabel=wildcard_patterns.slabel)
+#     shell:
+#         """
+#         echo "Get per-base reference allele frequency for each sample."
+#         """
+
+rule run_inStrain_profile:
+    input:
+        expand("data/inStrain_output/IS_{sample_id}_{primer_seqid}_{slabel}_LE_pangenome/output/IS_{sample_id}_{primer_seqid}_{slabel}_LE_pangenome_genome_info.tsv",
+            zip,
+            sample_id=wildcard_patterns.sample_id,
+            primer_seqid=wildcard_patterns.primer_seqid,
+            slabel=wildcard_patterns.slabel)
+    shell:
+        """
+        echo "All inStrain profiles completed!"
+        """
+
+# rule run_inStrain_comparison:
+#     input:
+#         expand("data/inStrain_output/IS_*LE_pangenome/",
+#             zip,
+#             sample_id=wildcard_patterns.sample_id,
+#             primer_seqid=wildcard_patterns.primer_seqid,
+#             slabel=wildcard_patterns.slabel)
+#     shell:
+#         """
+#         echo "All inStrain comparisons completed!"
+#         """
+## Global rule to call variants for all samples
+# rule run_call_variants:
+#     input:
+#         expand("data/variants/{sample_id}_{primer_seqid}_{slabel}_LE_pangenome_recruitment.vcf",
+#             zip,
+#             sample_id=wildcard_patterns.sample_id,
+#             primer_seqid=wildcard_patterns.primer_seqid,
+#             slabel=wildcard_patterns.slabel)
+#     shell:
+#         """
+#         echo "All variant calling completed!"
+#         """
+
+# Run this rule for recruitment mapping of reads to reference fasta sequences of interest, such as target genomes or genes.
+# rule recruitment_mapping:
+#     input:
+#         decon_reads_fwd = BASE_DIR + "{sample_id}_{primer_seqid}_{slabel}_decon_R1.fastq.gz",
+#         decon_reads_rev = BASE_DIR + "{sample_id}_{primer_seqid}_{slabel}_decon_R2.fastq.gz",
+#         reference = "data/references/microcystis_LE/pan_genome_reference.fa"
+#     output:
+#         bamfiles = "/scratch/vdenef_root/vdenef0/lyucheng/ND_feed1819_metagenome/data/recruitment_map/just_genes/{sample_id}_{primer_seqid}_{slabel}_LE_pangenome_recruitment.id95.bam",
+#         temp_sam = temp("/scratch/vdenef_root/vdenef0/lyucheng/ND_feed1819_metagenome/data/recruitment_map/just_genes/{sample_id}_{primer_seqid}_{slabel}_LE_pangenome_recruitment.id95.sam"),
+#         # Output files for BBMap statistics
+#         scafrpkm = "/scratch/vdenef_root/vdenef0/lyucheng/ND_feed1819_metagenome/data/recruitment_map/just_genes/{sample_id}_{primer_seqid}_{slabel}_LE_pangenome_recruitment.id95.rpkm.txt",
+#         scafstats = "/scratch/vdenef_root/vdenef0/lyucheng/ND_feed1819_metagenome/data/recruitment_map/just_genes/{sample_id}_{primer_seqid}_{slabel}_LE_pangenome_scafstats.id95.txt",
+#         idhist = "/scratch/vdenef_root/vdenef0/lyucheng/ND_feed1819_metagenome/data/recruitment_map/just_genes/{sample_id}_{primer_seqid}_{slabel}_LE_pangenome_idhist.id95.txt"
+#     log: "/nfs/turbo/lsa-vdeneflab/vdenef1-mistorage/Shared/lyucheng/nikesh_metG_assembly/graz_resist_genes/logs/recruitment_map/just_genes/{sample_id}_{primer_seqid}_{slabel}_LE_pangenome.id95.log"
+#     resources: mem_mb = 120000, cpus = 24, time_min = 2880, partition= "standard", account = "vdenef0"
+#     shell:
+#         """
+#         module load Bioinformatics
+#         module load bbtools
+#         module load samtools/1.13-fwwss5n
+#         echo "Running BBMap for recruitment mapping of {wildcards.sample_id} to LE_pangenome reference genotype"
+
+#         bbmap_mem=$(echo "scale=-1; ({resources.mem_mb}*0.8)/1" | bc)
+#         echo "Job memory= {resources.mem_mb}, bbmap allocated memory=$bbmap_mem because it is greedy"
+
+#         bbmap.sh \
+#         -Xmx${{bbmap_mem}}m -eoom \
+#         ref={input.reference} \
+#         nodisk=t \
+#         in={input.decon_reads_fwd} \
+#         in2={input.decon_reads_rev} \
+#         out={output.temp_sam} \
+#         t={resources.cpus} \
+#         rpkm={output.scafrpkm} \
+#         scafstats={output.scafstats} \
+#         idhist={output.idhist} \
+#         slow k=12 ambiguous=best idfilter=0.95 \
+#         2>&1 | tee {log}
+
+#         # Convert SAM to sorted BAM
+#         echo "Converting SAM to sorted BAM..."
+#         samtools view -bS {output.temp_sam} | samtools sort -o {output.bamfiles}
+#         samtools index {output.bamfiles}
+
+#         echo "BAM file created and sorted: {output.bamfiles}"
+#         """
+
+# rule filterBam:
+#     """
+#     Filter BAM files based on mapping quality and identity.
+#     This is usually required for lgt marker genes to get correct strain assignment.
+#     """
+#     input:
+#         bamfile = "/scratch/vdenef_root/vdenef0/lyucheng/ND_feed1819_metagenome/data/recruitment_map/just_genes/{sample_id}_{primer_seqid}_{slabel}_LE_pangenome_recruitment.bam"
+#     output:
+#         temp_bam = temp("/scratch/vdenef_root/vdenef0/lyucheng/ND_feed1819_metagenome/data/recruitment_map/just_genes/{sample_id}_{primer_seqid}_{slabel}_LE_pangenome_recruitment_temp.bam"),
+#         filtered_bam = "/scratch/vdenef_root/vdenef0/lyucheng/ND_feed1819_metagenome/data/recruitment_map/just_genes/{sample_id}_{primer_seqid}_{slabel}_LE_pangenome_recruitment_filt99.cov50.bam"
+#     log: "logs/recruitment_map/just_genes/{sample_id}_{primer_seqid}_{slabel}_LE_pangenome_recruitment_filter.log"
+#     resources: mem_mb = 16000, cpus = 4, time_min = 240, partition = "standard", account = "vdenef0"
+#     shell:
+#         """
+#         module load Bioinformatics
+#         module load augustus/3.3
+#         module load samtools/1.13-fwwss5n
+#         echo "Filtering BAM file for {wildcards.sample_id} with identity >= 99% & minimum coverage of 50"
+
+#         # Filter BAM file based on mapping identity and coverage
+#         filterBam --minId 99 --minCover 50 --in {input.bamfile} --out {output.temp_bam}
+#         samtools sort -O bam -o {output.filtered_bam} {output.temp_bam}
+#         samtools index {output.filtered_bam}
+
+#         echo "Filtered BAM file created: {output.filtered_bam}"
+#         """
+# Run this rule for strain analysis
+rule inStrain_profile:
+    input:
+        bamfile = "/nfs/turbo/lsa-vdeneflab/vdenef1-mistorage/Shared/lyucheng/nikesh_metG_assembly/graz_resist_genes/data/recruitment_map/just_genes/{sample_id}_{primer_seqid}_{slabel}_LE_pangenome_recruitment.id95.bam",
+        bai_file = "/nfs/turbo/lsa-vdeneflab/vdenef1-mistorage/Shared/lyucheng/nikesh_metG_assembly/graz_resist_genes/data/recruitment_map/just_genes/{sample_id}_{primer_seqid}_{slabel}_LE_pangenome_recruitment.id95.bam.bai",
+        reference = "data/references/microcystis_LE/pan_genome_reference.fa"
+    output:
+        profile_dir = directory("data/inStrain_output/IS_{sample_id}_{primer_seqid}_{slabel}_LE_pangenome/"),
+        genome_info = "data/inStrain_output/IS_{sample_id}_{primer_seqid}_{slabel}_LE_pangenome/output/IS_{sample_id}_{primer_seqid}_{slabel}_LE_pangenome_genome_info.tsv"
+    log: "logs/inStrain/{sample_id}_{primer_seqid}_{slabel}_LE_pangenome.log"
+    #benchmark
+    resources: mem_mb = 120000, cpus = 16, time_min = 2880, partition = "standard", account = "vdenef0"
+    shell:
+        """
+        module load Bioinformatics
+        module load samtools/1.13-fwwss5n
+        # Initialize conda for shell interaction
+        
+        source ~/miniconda3/etc/profile.d/conda.sh
+        
+        # Load conda environment
+        
+        conda activate run_metagenome
+        
+        echo "Indexing BAM file for {wildcards.sample_id}..."
+        
+        samtools index {input.bamfile}
+        
+        echo "Running inStrain profile for {wildcards.sample_id}..."
+        
+        inStrain profile {input.bamfile} \
+            {input.reference} \
+            -o {output.profile_dir} \
+            --use_full_fasta_header \
+            -p {resources.cpus} \
+            2>&1 | tee {log}
+        
+        echo "inStrain profile completed for {wildcards.sample_id}"
+        conda deactivate || true
+        """
+# rule inStrain_comparison:
+#     input:
+#         profile = directory("data/inStrain_output/IS_*_LE_pangenome/")
+#     output:
+#         comparison_dir = directory("data/inStrain_comparison/IS_LE_pangenome_comparison/")
+#     conda: "config/conda/instrain.yaml"  
+#     log: "logs/inStrain_comparison/inStrain_comparison.log"
+#     resources: mem_mb = 60000, cpus = 16, time_min = 1440, partition = "standard", account = "vdenef0"
+#     shell:
+#         """
+#         # Initialize conda for shell interaction
+        
+#         source ~/miniconda3/etc/profile.d/conda.sh
+        
+#         # Load conda environment
+        
+#         conda activate run_metagenome
+
+#         echo "Running inStrain comparison for all samples..."
+        
+#         inStrain compare \
+#             {input.profile} \
+#             -o {output.comparison_dir} \
+#             -p {resources.cpus} \
+#             --store_coverage_overlap \
+#             --store_mismatch_locations \
+#             2>&1 | tee {log}
+        
+#         echo "inStrain comparison completed for all samples"
+#         conda deactivate
+#         """
+# # Run this rule to get per-base reference allele frequency from BAM files
+# rule get_ref_freq:
+#     input:
+#         bamfile = "data/recruitment_map/just_genes/{sample_id}_{primer_seqid}_{slabel}_LE_pangenome_recruitment.bam",
+#         reference = "data/references/target_genes/LE_pangenome_allref.fasta"
+#     output:
+#         raf_tsv = "data/recruitment_map/just_genes/{sample_id}_{primer_seqid}_{slabel}_LE_pangenome_recruitment.raf.tsv"
+#     log: "logs/recruitment_map/just_genes/{sample_id}_{primer_seqid}_{slabel}_LE_pangenome_recruitment_get_ref_freq.log"
+#     resources: mem_mb = 16000, cpus = 4, time_min = 240, partition = "standard", account = "vdenef0"
+#     shell:
+#         """
+#         python get_ref_freq.py \
+#             --bam_file {input.bamfile} \
+#             --ref_file {input.reference} \
+#             -o {output.raf_tsv} \
+#             2>&1 | tee {log}
+#         """
+
+# ## Run this rule to call variants with bcftools
+# rule call_variants:
+#     input:
+#         bamlist= "/scratch/vdenef_root/vdenef0/lyucheng/ND_feed1819_metagenome/data/recruitment_map/just_genes/LE_pangenome_recruitment_bamlist",
+#         reference = "data/references/target_genes/LE_pangenome_allref.fasta"
+#     output:
+#         vcf = "data/variants/{sample_id}_{primer_seqid}_{slabel}_LE_pangenome_recruitment.vcf"
+
+#     log: "logs/variants/{sample_id}_{primer_seqid}_{slabel}_LE_pangenome_recruitment_call_variants.log"
+#     resources: mem_mb = 16000, cpus = 4, time_min = 240, partition = "standard", account = "vdenef0"
+#     shell:
+#         """
+#         module load Bioinformatics
+#         module load bcftools/1.21
+#         bcftools mpileup -Ou \
+#         -f {input.reference} \
+#         -b {input.bamlist} \
+#         --indels-2.0    \
+#         | bcftools call -mv -Ou --ploidy 1 \
+#         | bcftools filter -s LowQual -i 'QUAL>30 && DP>10' \
+#         > {output.vcf} 2> {log}
+#         """

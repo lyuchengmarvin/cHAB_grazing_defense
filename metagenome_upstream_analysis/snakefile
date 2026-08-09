@@ -1,0 +1,589 @@
+import os
+import re
+import subprocess
+from snakemake.io import glob_wildcards
+from glob import glob
+import pandas as pd
+import time
+
+# This snakemake script is for processing Nikesh's feeding experiment metagenome samples
+
+BASE_DIR = "/nfs/turbo/lsa-vdeneflab/vdenef1-mistorage/Shared/lyucheng/nikesh_metG_assembly/remaining/"
+
+# Define the samples, primer sequences, and directions with wildcards
+wildcard_patterns = glob_wildcards(
+    BASE_DIR + "{sample_id}_{primer_seqid}_R{direction}_001.fastq.gz"
+    )
+
+rule run_fastqc:
+    input:
+        expand("data/fastqc/{sample_id}_{primer_seqid}_R{direction}_001_fastqc.html",
+        zip, #Added zip, as a parameter to expand() to ensure it only creates combinations that actually exist in your data
+        sample_id = wildcard_patterns.sample_id,
+        primer_seqid = wildcard_patterns.primer_seqid,
+        direction = wildcard_patterns.direction)
+    shell:
+        """
+        echo "FastQC analysis complete!"
+        """
+
+rule run_fastp:
+    input: 
+        expand("data/fastp/{sample_id}_{primer_seqid}_qcd_R{direction}.fastq.gz", 
+            zip,
+            sample_id = wildcard_patterns.sample_id, 
+            primer_seqid = wildcard_patterns.primer_seqid, 
+            direction = wildcard_patterns.direction)
+    shell:
+        """
+        echo "FastP deduplication and trimming complete!"
+        """
+
+rule run_human_read_removal:
+    input: 
+        expand("data/decontam_fastqs/{sample_id}_{primer_seqid}_decon_R{direction}.fastq.gz", 
+            zip,
+            sample_id = wildcard_patterns.sample_id,
+            primer_seqid = wildcard_patterns.primer_seqid,
+            direction = wildcard_patterns.direction) + \
+        expand("data/read_stats/{sample_id}_{primer_seqid}_read_count_fastp.tsv", 
+            zip,
+            sample_id = wildcard_patterns.sample_id,
+            primer_seqid = wildcard_patterns.primer_seqid)
+    shell:
+        """
+        echo "Contaminant reads removal and read counting complete!"
+        """
+
+rule run_post_fastqc:
+    input:
+        expand("data/fastqc/{sample_id}_{primer_seqid}_decon_R{direction}_001_fastqc.html",
+        zip, #Added zip, as a parameter to expand() to ensure it only creates combinations that actually exist in your data
+        sample_id = wildcard_patterns.sample_id,
+        primer_seqid = wildcard_patterns.primer_seqid,
+        direction = wildcard_patterns.direction)
+    shell:
+        """
+        echo "FastQC analysis complete!"
+        """
+# Run this if you want to count reads separately.
+# rule run_read_counting:
+#     input:
+#         expand("data/{sample_id}_{primer_seqid}_read_count_fastp.tsv", 
+#             zip,
+#             sample_id = wildcard_patterns.sample_id,
+#             primer_seqid = wildcard_patterns.primer_seqid)
+#     shell:
+#         """
+#         echo "Summary of read counting completed!"
+#         """
+
+# Run this when read pairs are not in sync. It will inform how many read pairs are not in sync.
+# rule run_repair_fastq:
+#     input:
+#         expand("data/fastp/{sample_id}_{primer_seqid}_repaired_R{direction}.fastq.gz", 
+#             zip,
+#             sample_id = wildcard_patterns.sample_id, 
+#             primer_seqid = wildcard_patterns.primer_seqid, 
+#             direction = wildcard_patterns.direction)
+
+rule run_megahit:
+    input: 
+        expand("data/assembly/megahit/{sample_id}_{primer_seqid}", 
+        zip,
+        sample_id = wildcard_patterns.sample_id,
+        primer_seqid = wildcard_patterns.primer_seqid)
+
+rule run_assemble_biosyntheticSPAdes:
+    input:
+        expand("data/assembly/biosyntheticSPAdes/{sampleID}_scaffolds.fasta",
+        sampleID = wildcard_patterns.sample_id)
+    shell:
+        """
+        echo "BiosyntheticSPAdes assembly complete!"
+        """
+
+# rule run_contig_coverage:
+#     input: expand("data/contig_coverage/{SampleID}-metabat_style_contig_coverage.tsv", SampleID = samples)
+
+# rule run_metabat2:
+#     input: expand("data/metabat2/{SampleID}/.done", SampleID = samples)
+
+# rule run_checkm:
+#     input: expand("data/checkm/{SampleID}.txt", SampleID = samples)
+
+# rule run_gtdb:
+#     input: expand("data/GTDB_{database_version}/{SampleID}/.done_GTDB", SampleID = samples, database_version = "release220")
+
+# rule run_bin_abundance:
+#     input: expand("data/bin_abundance/{SampleID}.txt", SampleID = samples)
+
+# rule run_drep:
+#     input: expand("data/drep/{SampleID}/.drep_done", SampleID = samples)
+
+# rule run_kofamscan:
+#     input: expand("data/metabat2/{SampleID}/kofamscan/{genome}_kofam_results.txt", SampleID = samples, genome = genomes)
+
+# Rules:
+rule fastqc:
+    input:
+        reads = BASE_DIR + "{sample_id}_{primer_seqid}_R{direction}_001.fastq.gz"
+    output:
+        report = "data/fastqc/{sample_id}_{primer_seqid}_R{direction}_001_fastqc.html"
+    params:
+        out_dir = "data/fastqc"
+    log: "logs/fastqc/{sample_id}_{primer_seqid}_R{direction}_001.log"
+    resources: time_min = 1000, cpus = 8, mem_mb = 50000, partition= "standard", account = "vdenef0"
+    shell:
+        """
+        echo "Fastqc is already included in the Bioinformatics module on the GreatLakes. Loading modules..."
+        module load Bioinformatics
+        module load fastqc
+        echo "Running FastQC on {input.reads}..."
+
+        fastqc -o {params.out_dir} -t {resources.cpus} {input.reads} | tee {log}
+        """
+
+rule fastp:
+    input:
+        fwd_reads = BASE_DIR + "{sample_id}_{primer_seqid}_R1_001.fastq.gz",
+        rev_reads = BASE_DIR + "{sample_id}_{primer_seqid}_R2_001.fastq.gz"
+    output:
+        tmp_fwd = temp(BASE_DIR + "{sample_id}_{primer_seqid}_dedup_tmp_R1.fastq.gz"),
+        tmp_rev = temp(BASE_DIR + "{sample_id}_{primer_seqid}_dedup_tmp_R2.fastq.gz"),
+        fwd_reads = "data/fastp/{sample_id}_{primer_seqid}_qcd_R1.fastq.gz",
+        rev_reads = "data/fastp/{sample_id}_{primer_seqid}_qcd_R2.fastq.gz",
+        json_dedup = "data/fastp/{sample_id}_{primer_seqid}_dedup.json",
+        html_dedup = "data/fastp/{sample_id}_{primer_seqid}_dedup.html",
+        html = "data/fastp/{sample_id}_{primer_seqid}.html",
+        json = "data/fastp/{sample_id}_{primer_seqid}.json"
+    conda: "config/conda/fastp.yaml"
+    log: "logs/fastp/{sample_id}_{primer_seqid}.log"
+    resources: cpus = 16, mem_mb = 60000, time_min=2880, partition= "standard", account = "vdenef0"
+    shell: 
+        """
+        # First deduplicate
+        fastp \
+            -i {input.fwd_reads} -I {input.rev_reads} \
+            -o {output.tmp_fwd} -O {output.tmp_rev} \
+            -h {output.html_dedup} -j {output.json_dedup} \
+            --thread {resources.cpus} \
+            -z 3 \
+            --dedup \
+            --dup_calc_accuracy 6  2>&1 | tee {log}
+
+        # Trim and filter reads, remove adapters
+        fastp \
+            -i {output.tmp_fwd} -I {output.tmp_rev} \
+            -o {output.fwd_reads} -O {output.rev_reads} \
+            -h {output.html} -j {output.json} \
+            --thread {resources.cpus} \
+            -z 9 \
+            --length_required 50 \
+            --n_base_limit 5 \
+            --low_complexity_filter --complexity_threshold 7 \
+            --detect_adapter_for_pe \
+            --correction \
+            --cut_front \
+            --cut_tail \
+            --cut_window_size 4 \
+            --cut_mean_quality 20 \
+            --overrepresentation_analysis 2>&1 | tee -a {log}
+        """
+
+rule bb_index:
+    input:
+        human_genome = "data/references/contaminants/human.GRCh38.p14.genome.fa.gz"
+    output:
+        "data/references/contaminants/ref/genome/1/info.txt"
+    params:
+        bbmap_index_path = "data/references/contaminants"
+    log: "logs/bbindex_human/bbmap_index.log"
+    benchmark:
+        "benchmarks/bb_index.txt" # This is a benchmark file to record the time taken for this rule, complementing the log file by providing a summary of resource usage.
+    resources: cpus = 8, mem_mb = 50000, partition= "standard", account = "vdenef0"
+    shell:
+        """ 
+        module load Bioinformatics
+        module load bbtools     
+        bbmap.sh \
+            ref={input.human_genome} \
+            path={params.bbmap_index_path} \
+            t={resources.cpus} \
+            2>&1 | tee {log}
+        """
+
+rule remove_contaminants:
+    input:
+        fwd_reads = "data/fastp/{sample_id}_{primer_seqid}_qcd_R1.fastq.gz",
+        rev_reads = "data/fastp/{sample_id}_{primer_seqid}_qcd_R2.fastq.gz",
+        human_genome = "data/references/contaminants/human.GRCh38.p14.genome.fa.gz",
+        spike_ins = "data/references/contaminants/spike_ins.fa",
+        #adapters = "data/references/contaminants/adapters.fa"
+        bbmap_index = "data/references/contaminants/ref/genome/1/info.txt"
+    output:
+        phix_rm_fwd = temp("data/decontam_fastqs/{sample_id}_{primer_seqid}_rm_R1.fastq.gz"),
+        phix_rm_rev = temp("data/decontam_fastqs/{sample_id}_{primer_seqid}_rm_R2.fastq.gz"),
+        decon_fwd = "data/decontam_fastqs/{sample_id}_{primer_seqid}_decon_R1.fastq.gz",
+        decon_rev = "data/decontam_fastqs/{sample_id}_{primer_seqid}_decon_R2.fastq.gz"
+    params:
+        bbmap_index_path = "data/references/contaminants"
+    log: "logs/bbmap_decontam/{sample_id}_{primer_seqid}.log"
+    resources: mem_mb = 120000, cpus = 24, time_min = 2880, partition= "standard", account = "vdenef0"
+    shell:
+        """
+        echo "Fastqc is already included in the Bioinformatics module on the GreatLakes. Loading modules..."
+        module load Bioinformatics
+        module load bbtools
+        echo "Running BBMap to remove contaminants from {input.fwd_reads} and {input.rev_reads}..."
+
+        bbmap_mem=$(echo "scale=-1; ({resources.mem_mb}*0.8)/1" | bc)
+        echo "Job memory= {resources.mem_mb}, bbmap allocated memory=$bbmap_mem because it is greedy"
+        
+        # Remove PhiX reads
+        bbduk.sh \
+            -Xmx${{bbmap_mem}}m -eoom \
+            in1={input.fwd_reads} \
+            in2={input.rev_reads} \
+            out1={output.phix_rm_fwd} \
+            out2={output.phix_rm_rev} \
+            t={resources.cpus} k=31 hdist=1 \
+            ref={input.spike_ins} \
+            path={params.bbmap_index_path} \
+            2>&1 | tee -a {log}
+
+        # Remove Human reads
+        echo "\n\n***doing remove contaminants***\n\n" >> {log}
+
+        bbmap.sh \
+            -Xmx${{bbmap_mem}}m -eoom \
+            in1={output.phix_rm_fwd} \
+            in2={output.phix_rm_rev} \
+            outu1={output.decon_fwd} \
+            outu2={output.decon_rev} \
+            ref={input.human_genome} \
+            t={resources.cpus} fast=t \
+            path={params.bbmap_index_path} \
+            2>&1 | tee -a {log}
+        """
+
+# Run post-processing fastqc
+rule post_fastqc:
+    input:
+        reads = "data/decontam_fastqs/{sample_id}_{primer_seqid}_decon_R{direction}.fastq.gz",
+    output:
+        report = "data/fastqc/{sample_id}_{primer_seqid}_decon_R{direction}_fastqc.html"
+    params:
+        out_dir = "data/fastqc"
+    log: "logs/fastqc/{sample_id}_{primer_seqid}_decon_R{direction}_001.log"
+    resources: time_min = 1000, cpus = 8, mem_mb = 50000, partition= "standard", account = "vdenef0"
+    shell:
+        """
+        echo "Fastqc is already included in the Bioinformatics module on the GreatLakes. Loading modules..."
+        module load Bioinformatics
+        module load fastqc
+        echo "Running FastQC on {input.reads}..."
+
+        fastqc -o {params.out_dir} -t {resources.cpus} {input.reads} | tee {log}
+        """
+
+rule count_reads_fastp:
+    input:
+        raw_reads_fwd = BASE_DIR + "{sample_id}_{primer_seqid}_R1_001.fastq.gz",
+        raw_reads_rev = BASE_DIR + "{sample_id}_{primer_seqid}_R2_001.fastq.gz",
+        qual_filt_and_trimmed_fwd = "data/fastp/{sample_id}_{primer_seqid}_qcd_R1.fastq.gz",
+        qual_filt_and_trimmed_rev = "data/fastp/{sample_id}_{primer_seqid}_qcd_R2.fastq.gz",
+        decon_reads_fwd = "data/decontam_fastqs/{sample_id}_{primer_seqid}_decon_R1.fastq.gz",
+        decon_reads_rev = "data/decontam_fastqs/{sample_id}_{primer_seqid}_decon_R2.fastq.gz"
+    output:
+        "data/read_stats/{sample_id}_{primer_seqid}_read_count_fastp.tsv"
+    resources: cpus=4, partition= "standard", account = "vdenef0"
+    shell:
+        """
+        printf "read_state\tfwd_read_count\trev_read_count\n" > {output} &&
+        printf "raw_reads\t$(($(pigz -dc -p {resources.cpus} {input.raw_reads_fwd} | wc -l) / 4 ))\t$(($(pigz -dc -p {resources.cpus} {input.raw_reads_rev} | wc -l) / 4 ))\n" >> {output} &&
+        printf "filt_and_trimmed_reads\t$(($(pigz -dc -p {resources.cpus} {input.qual_filt_and_trimmed_fwd} | wc -l) / 4 ))\t$(($(pigz -dc -p {resources.cpus} {input.qual_filt_and_trimmed_rev} | wc -l) / 4 ))\n" >> {output} &&
+        printf "decon_reads\t$(($(pigz -dc -p {resources.cpus} {input.decon_reads_fwd} | wc -l) / 4 ))\t$(($(pigz -dc -p {resources.cpus} {input.decon_reads_rev} | wc -l) / 4 ))\n" >> {output}
+        """
+
+# Run this when read pairs are not in sync. It will inform how many read pairs are not in sync.
+# rule repair_fastq:
+#     input:
+#         fwd = "data/fastp/{sample_id}_{primer_seqid}_qcd_R1_001.fastq.gz",
+#         rev = "data/fastp/{sample_id}_{primer_seqid}_qcd_R2_001.fastq.gz"
+#     output:
+#         fwd_repaired = "data/fastp/{sample_id}_{primer_seqid}_repaired_R1_001.fastq.gz",
+#         rev_repaired = "data/fastp/{sample_id}_{primer_seqid}_repaired_R2_001.fastq.gz"
+#     shell:
+#         """
+#         module load Bioinformatics
+#         module load bbtools
+#         repair.sh \
+#             in1={input.fwd} \
+#             in2={input.rev} \
+#             out1={output.fwd_repaired} \
+#             out2={output.rev_repaired} \
+#             repair
+#         """
+
+rule megahit:
+    input:
+        decon_reads_fwd = "data/decontam_fastqs/{sample_id}_{primer_seqid}_decon_R1.fastq.gz",
+        decon_reads_rev = "data/decontam_fastqs/{sample_id}_{primer_seqid}_decon_R2.fastq.gz"
+    output:
+        assembly_directory = directory("data/assembly/megahit/{sample_id}_{primer_seqid}")
+    log: "logs/megahit/{sample_id}_{primer_seqid}.log"
+    resources: cpus = 24, mem_mb = 180000, time_min = 7200, partition= "standard", account = "vdenef0"
+    shell:
+        """
+        echo "megahit is already included in the Bioinformatics module on the GreatLakes. Loading modules..."
+        module load Bioinformatics
+        module load megahit
+        megahit \
+            -1 {input.decon_reads_fwd} \
+            -2 {input.decon_reads_rev} \
+            -t {resources.cpus} \
+            --presets meta-sensitive \
+            --memory 0.5 \
+            -o {output.assembly_directory} 2>&1 | tee -a {log}
+        """
+
+# rule assemble_biosyntheticSPAdes:
+#     input:
+#         qc_fwd_reads = "/nfs/turbo/lsa-vdeneflab/vdenef1-mistorage/Shared/Jacob/NOAA_Omics/qced_reads/{sampleID}/{sampleID}_R1_deduped_trimmed_screened.fq",
+#         qc_rev_reads = "/nfs/turbo/lsa-vdeneflab/vdenef1-mistorage/Shared/Jacob/NOAA_Omics/qced_reads/{sampleID}/{sampleID}_R2_deduped_trimmed_screened.fq"
+#     output:
+#         assembly_dir = directory("data/assembly/biosyntheticSPAdes/{sampleID}"),
+#         contigs = "data/assembly/biosyntheticSPAdes/{sampleID}_scaffolds.fasta"
+#     log: "logs/assembly/biosyntheticSPAdes/{sampleID}.log"
+#     benchmark: "benchmarks/biosyntheticSPAdes/{sampleID}.txt"
+#     #resources: cpus = 24, time_min=7200, mem_mb = lambda wildcards, attempt: attempt * 120000
+#     resources: cpus = 24, time_min=20000, mem_mb = 500000, partition = "largemem"
+#     #resources: cpus = 36, time_min=20000, mem_mb = 170000
+#     #resources: cpus = 64, time_min=20000, mem_mb = 500000
+#     shell:
+#         """
+#         echo("SPAdes is already included in the Bioinformatics module on the GreatLakes. Loading modules...")
+#         module load Bioinformatics
+#         module load spades/4.0.0
+#         export OMP_NUM_THREADS={resources.cpus}
+
+#         metaspades.py \
+#             -t {resources.cpus} \
+#             --bio \
+#             --memory $(({resources.mem_mb}/1024)) \
+#             -1 {input.fwd_reads} \
+#             -2 {input.rev_reads} \
+#             -o {output.assembly_dir} 2>&1 | tee {log}
+#         """
+
+
+# rule run_quast:
+#     input:
+#         expand("data/assembly/{SampleID}/quast/report.tsv", SampleID = samples)
+
+# rule quast_megahit:
+#     input:
+#         megahit_contigs = "data/assembly/megahit/{SampleID}/final.contigs.fa"
+#     output:
+#         report = "data/assembly/{SampleID}/quast/report.tsv"
+#     params:
+#         out_dir = "data/assembly/{SampleID}/quast"
+#     log: "log/megahit/quast_megahit/{SampleID}.log"
+#     benchmark:
+#         "benchmarks/assembly/quast_megahit/{SampleID}.txt"
+#     conda:
+#         "config/conda/quast.yaml"
+#     resources:
+#         cpus = 1, mem_mb = 20000
+#     shell:
+#         """
+#         quast.py {input.megahit_contigs} -o {params.out_dir} 2>&1 | tee {log}
+#         """
+
+# rule contig_coverage:
+#     input:
+#         decon_reads_fwd = "data/fastqs/{SampleID}_decon_fwd.fastq.gz",
+#         decon_reads_rev = "data/fastqs/{SampleID}_decon_rev.fastq.gz",
+#         assembly_directory = "data/assembly/megahit/{SampleID}"
+#     output: 
+#         coverage_metabat = "data/contig_coverage/{SampleID}-metabat_style_contig_coverage.tsv"
+#     params:
+#         tmpdir = "tmp/coverm_contig_coverage/{SampleID}"
+#     benchmark: "benchmarks/contig_coverage/{SampleID}.txt"
+#     conda: "config/conda/coverm.yaml"
+#     resources: cpus=24, mem_mb=120000, time_min=2880 # standard assemblies
+#     #resources: cpus=24, mem_mb=1000000, time_min=2880, partition = "largemem" # coassembly
+#     priority: 2
+#     shell:
+#         """
+#         export TMPDIR={params.tmpdir}
+#         [[ "${{HOSTNAME}}" == "cayman" || "${{HOSTNAME}}" == "vondamm" ]] && export TMPDIR=/scratch/$USER
+#         mkdir -p $TMPDIR
+
+#         coverm contig \
+#             -c data/fastqs/*_decon_fwd.fastq.gz \
+#             -r {input.assembly_directory}/final.contigs.fa \
+#             --bam-file-cache-directory $TMPDIR/{wildcards.SampleID} \
+#             --discard-unmapped \
+#             -t {resources.cpus} \
+#             --mapper minimap2-sr \
+#             --methods metabat \
+#             --output-file {output.coverage_metabat}
+
+#         rm -r $TMPDIR/{wildcards.SampleID}
+#         """
+
+# rule metabat2:
+#     input:
+#         assembly_directory = "data/assembly/megahit/{SampleID}",
+#         coverm_depth = "data/contig_coverage/{SampleID}-metabat_style_contig_coverage.tsv"
+#     output:
+#         done = touch("data/metabat2/{SampleID}/.done")
+#     params:
+#         bin_name = "data/metabat2/{SampleID}/metabat2"
+#     benchmark: "benchmarks/metabat2/{SampleID}.txt"
+#     singularity: "docker://metabat/metabat"
+#     resources: cpus=16, mem_mb=20000, time_min=2880 # standard samples
+#     shell:
+#         """
+#         metabat2 -i {input.assembly_directory}/final.contigs.fa \
+#             -a {input.coverm_depth} \
+#             -o {params.bin_name} \
+#             -m 2000 \
+#             -t {resources.cpus} \
+#             --unbinned
+#         """
+
+# rule checkm:
+#     input: "data/metabat2/{SampleID}/.done"
+#     output:
+#         results = "data/checkm/{SampleID}.txt"
+#     params:
+#         in_dir = "data/metabat2/{SampleID}",
+#         out_dir = "data/checkm/{SampleID}_full_results"
+#     conda: "config/conda/checkm.yaml"
+#     resources: cpus=16, mem_mb=80000, time_min=2880
+#     shell:
+#         """
+#         # Move the files corresponding to unbinned contigs to a subfolder so checkM isn't run on them
+#         mkdir -p data/metabat2/{wildcards.SampleID}/unbinned 
+#         mv data/metabat2/{wildcards.SampleID}/metabat2.[!0-9]*.fa data/metabat2/{wildcards.SampleID}/unbinned || true
+
+#         checkm lineage_wf --tab_table -f {output.results} -x fa -t {resources.cpus} {params.in_dir} {params.out_dir}
+#         """
+
+# rule GTDB_versioned:
+#     input:
+#         metabat_complete = "data/metabat2/{SampleID}/.done",
+#         refs = "/geomicro/data2/kiledal/GLAMR/data/reference/GTDBtk/{database_version}"
+#     params:
+#         input_bin_dir = "data/metabat2/{SampleID}",
+#         out_dir = "data/GTDB_{database_version}/{SampleID}",
+#         pplacer_cpus = 1
+#     output:
+#         done = touch("data/GTDB_{database_version}/{SampleID}/.done_GTDB")
+#     conda: "config/conda/gtdbtk_2.4.0.yaml"
+#     benchmark: "benchmarks/GTDB/{SampleID}_database-{database_version}.txt"
+#     log: "logs/GTDB/{SampleID}_database-{database_version}.log"
+#     resources: cpus=16, mem_mb=100000, time_min=2880
+#     shell:
+#         """
+#         export GTDBTK_DATA_PATH={input.refs}
+
+#         gtdbtk classify_wf \
+#             --extension fa \
+#             --genome_dir {params.input_bin_dir} \
+#             --out_dir {params.out_dir} \
+#             --cpus {resources.cpus} \
+#             --pplacer_cpus {params.pplacer_cpus} \
+#             --mash_db $GTDBTK_DATA_PATH/mash_db
+#         """
+
+# rule bin_abundance:
+#     input:
+#         "data/metabat2/{SampleID}/.done",
+#         decon_reads_fwd = "data/fastqs/{SampleID}_decon_fwd.fastq.gz",
+#         decon_reads_rev = "data/fastqs/{SampleID}_decon_rev.fastq.gz"
+#     output:
+#         "data/bin_abundance/{SampleID}.txt",
+#     params:
+#         bin_dir = "data/metabat2/{SampleID}"
+#     benchmark: "benchmarks/bin_abundance/{SampleID}.txt"
+#     conda: "config/conda/coverm.yaml"
+#     resources: cpus=24, mem_mb=120000, time_min=2880 # standard assemblies
+#     shell:
+#         """
+#         coverm genome \
+#             -t {resources.cpus} \
+#             --methods relative_abundance mean trimmed_mean covered_bases variance length count reads_per_base rpkm tpm \
+#             --output-format sparse \
+#             --min-covered-fraction 0 \
+#             -1 {input.decon_reads_fwd} \
+#             -2 {input.decon_reads_rev} \
+#             --genome-fasta-files {params.bin_dir}/*.fa \
+#             -o {output}
+#         """
+
+# rule drep_new:
+#     input: 
+#         input_bins = "data/metabat2/{SampleID}"
+#     output:
+#         touch("data/drep/{SampleID}/.drep_done")
+#     params:
+#         main_dir = directory("data/drep/{SampleID}/"),
+#         input_bins = "data/metabat2/{SampleID}/*.fa"
+#     conda: "config/conda/drep.yaml"
+#     log: "logs/drep/{SampleID}.log"
+#     benchmark: "benchmarks/drep/{SampleID}.txt"
+#     resources: cpus=8, mem_mb=150000, time_min=2880
+#     shell:
+#         """
+#         rm -rf {params.main_dir} # Clear any old drep output
+        
+#         dRep dereplicate \
+#             {params.main_dir} \
+#             -p {resources.cpus} \
+#             --contamination 50 \
+#             --completeness 30 \
+#             -pa 0.9 \
+#             -sa 0.99 \
+#             --length 10000 \
+#             -g {params.input_bins}
+#         """
+
+# rule prodigal:
+#     input:
+#         genome = "data/metabat2/{SampleID}/{genome}.fa"
+#     output: 
+#         proteins = "data/metabat2/{SampleID}/prodigal/{genome}.faa",
+#         genes = "data/metabat2/{SampleID}/prodigal/{genome}.gff"
+#     conda: "config/conda/prodigal.yaml"
+#     resources: cpus = 1, mem_mb = 10000
+#     shell:
+#         """
+#         prodigal -i {input.genome} -a {output.proteins} -d {output.genes} #1>{log} 2>&1
+#         """
+
+# rule kofam_scan:
+#     input:
+#         proteins = "data/metabat2/{SampleID}/prodigal/{genome}.faa",
+#         profile = "/geomicro/data2/kiledal/GLAMR/data/reference/kegg/kofamscan/profiles",
+#         ko_list = "/geomicro/data2/kiledal/GLAMR/data/reference/kegg/kofamscan/ko_list"
+#     output:
+#         ko_annot = "data/metabat2/{SampleID}/kofamscan/{genome}_kofam_results.txt"
+#     conda: "config/conda/kofamscan.yaml"
+#     #shadow: "shallow"
+#     benchmark: "benchmarks/kofamscan/{SampleID}-{genome}.txt"
+#     log: "logs/kofamscan/{SampleID}-{genome}.log"
+#     resources: cpus=24, time_min = 20000, mem_mb = lambda wildcards, attempt: attempt * 100000
+#     shell:
+#         """
+#         exec_annotation \
+#             -o {output.ko_annot} \
+#             --format=detail-tsv \
+#             --cpu={resources.cpus}  \
+#             --profile {input.profile} \
+#             --tmp-dir=/tmp/{wildcards.SampleID}_kofamscan \
+#             --ko-list {input.ko_list} {input.proteins} | tee {log}
+
