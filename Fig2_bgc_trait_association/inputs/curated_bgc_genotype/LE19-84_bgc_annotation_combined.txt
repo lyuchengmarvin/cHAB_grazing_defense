@@ -1,0 +1,314 @@
+Query_gene_name	Query_gene_annotation	Reference_Name_lauren	Reference_Name_antiSMASH	Not_in_Lauren	Not_in_antiSMASH	Both_match	Main_Product	Biosynthetic_Class	Organism	Gene	New_BGC_name	gene_type	pos_in_bgc	core_genes	genes_in_bgc
+FMDALA_10060	methyltransferase	AAF00954.1_mcyJ_MicrocystisaeruginosaPCC7806_microcystinLR	ctg409_3	FALSE	FALSE	TRUE	microcystin LR	NRP, Modular type I polyketide	Microcystis aeruginosa PCC 7806	mcyJ	Microcystin LR-Microcystis	additional	2	6	17
+FMDALA_10065	dehydrogenase	AAF00955.1_mcyI_MicrocystisaeruginosaPCC7806_microcystinLR	ctg409_4	FALSE	FALSE	TRUE	microcystin LR	NRP, Modular type I polyketide	Microcystis aeruginosa PCC 7806	mcyI	Microcystin LR-Microcystis	additional	3	6	17
+FMDALA_10070	ABC transporter	AAF00956.1_mcyH_MicrocystisaeruginosaPCC7806_microcystinLR	ctg409_5	FALSE	FALSE	TRUE	microcystin LR	NRP, Modular type I polyketide	Microcystis aeruginosa PCC 7806	mcyH	Microcystin LR-Microcystis	transport	4	6	17
+FMDALA_10075	beta-ketoacyl synthase	AAF00957.1_mcyG_MicrocystisaeruginosaPCC7806_microcystinLR	ctg409_6	FALSE	FALSE	TRUE	microcystin LR	NRP, Modular type I polyketide	Microcystis aeruginosa PCC 7806	mcyG	Microcystin LR-Microcystis	core	5	6	17
+FMDALA_10085	non-ribosomal peptide synthetase	AAF00958.1_mcyE_MicrocystisaeruginosaPCC7806_microcystinLR	ctg409_8	FALSE	FALSE	TRUE	microcystin LR	NRP, Modular type I polyketide	Microcystis aeruginosa PCC 7806	mcyE	Microcystin LR-Microcystis	core	7	6	17
+FMDALA_10090	Acyl transferase domain in polyketide synthase (PKS) enzymes	AAF00959.1_mcyD_MicrocystisaeruginosaPCC7806_microcystinLR	ctg409_9	FALSE	FALSE	TRUE	microcystin LR	NRP, Modular type I polyketide	Microcystis aeruginosa PCC 7806	mcyD	Microcystin LR-Microcystis	core	8	6	17
+FMDALA_10100	Nonribosomal peptide synthetase McyB	AAF00961.1_mcyB_MicrocystisaeruginosaPCC7806_microcystinLR	ctg409_11	FALSE	FALSE	TRUE	microcystin LR	NRP, Modular type I polyketide	Microcystis aeruginosa PCC 7806	mcyB	Microcystin LR-Microcystis	core	10	6	17
+FMDALA_10105	non-ribosomal peptide synthetase	AAF00962.1_mcyC_MicrocystisaeruginosaPCC7806_microcystinLR	ctg409_12	FALSE	FALSE	TRUE	microcystin LR	NRP, Modular type I polyketide	Microcystis aeruginosa PCC 7806	mcyC	Microcystin LR-Microcystis	core	11	6	17
+FMDALA_10080	aspartate/glutamate racemase family protein	AAF00963.1_mcyF_MicrocystisaeruginosaPCC7806_microcystinLR	ctg409_7	FALSE	FALSE	TRUE	microcystin LR	NRP, Modular type I polyketide	Microcystis aeruginosa PCC 7806	mcyF	Microcystin LR-Microcystis	other	6	6	17
+FMDALA_10110	FAD-dependent oxidoreductase	AAF00964.1_uma1_MicrocystisaeruginosaPCC7806_microcystinLR	ctg409_13	FALSE	FALSE	TRUE	microcystin LR	NRP, Modular type I polyketide	Microcystis aeruginosa PCC 7806	uma1	Microcystin LR-Microcystis	other	12	6	17
+FMDALA_10115	Putative restriction endonuclease	AAF00965.1_uma2_MicrocystisaeruginosaPCC7806_microcystinLR	ctg409_14	FALSE	FALSE	TRUE	microcystin LR	NRP, Modular type I polyketide	Microcystis aeruginosa PCC 7806	uma2	Microcystin LR-Microcystis	other	13	6	17
+FMDALA_10120	adenylyl-sulfate kinase	AAF00966.1_uma3_MicrocystisaeruginosaPCC7806_microcystinLR	ctg409_15	FALSE	FALSE	TRUE	microcystin LR	NRP, Modular type I polyketide	Microcystis aeruginosa PCC 7806	uma3	Microcystin LR-Microcystis	other	14	6	17
+FMDALA_11045	transposase	AAF00967.1_uma4_MicrocystisaeruginosaPCC7806_microcystinLR	NA	FALSE	TRUE	FALSE	microcystin LR	NRP, Modular type I polyketide	Microcystis aeruginosa PCC 7806	uma4	Microcystin LR-Microcystis	other	15	6	17
+FMDALA_21620	DUF6014 domain-containing protein	AAZ03548.1_mcnG_Microcystissp.NIVA-CYA172/5_cyanopeptolin	NA	FALSE	TRUE	FALSE	cyanopeptolin	NRP	Microcystis sp. NIVA-CYA 172/5	mcnG	Cyanopeptolin-Microcystis	other	1	4	7
+FMDALA_21615	ABC transporter	AAZ03549.1_mcnF_Microcystissp.NIVA-CYA172/5_cyanopeptolin	NA	FALSE	TRUE	FALSE	cyanopeptolin	NRP	Microcystis sp. NIVA-CYA 172/5	mcnF	Cyanopeptolin-Microcystis	transport	2	4	7
+FMDALA_09345	Carrier domain-containing protein	ABI26077.1_ociA_PlanktothrixagardhiiNIVA-CYA116_cyanopeptolin	ctg29_2	FALSE	FALSE	TRUE	cyanopeptolin	NRP	Planktothrix agardhii NIVA-CYA 116	ociA	Cyanopeptolin-Planktothrix	core	2	3	4
+FMDALA_20245	Tyrocidine synthase 3	ABI26078.1_ociB_PlanktothrixagardhiiNIVA-CYA116_cyanopeptolin	ctg88_25	FALSE	FALSE	TRUE	cyanopeptolin	NRP	Planktothrix agardhii NIVA-CYA 116	ociB	Cyanopeptolin-Planktothrix	core	3	3	4
+FMDALA_03670	peptide synthetase	ACM68682.1_aerA_MicrocystisaeruginosaNIES-98_aeruginosin98-A,aeruginosin98-B,aeruginosin98-C	ctg225_3	FALSE	FALSE	TRUE	aeruginosin 98-A, aeruginosin 98-B, aeruginosin 98-C	NRP	Microcystis aeruginosa NIES-98	aerA	Aeruginosin-Microcystis	core	1	3	14
+FMDALA_10760	type 2 isopentenyl-diphosphate Delta-isomerase	ACM68685.1_aerK_MicrocystisaeruginosaNIES-98_aeruginosin98-A,aeruginosin98-B,aeruginosin98-C	ctg266_2	FALSE	FALSE	TRUE	aeruginosin 98-A, aeruginosin 98-B, aeruginosin 98-C	NRP	Microcystis aeruginosa NIES-98	aerK	Aeruginosin-Microcystis	other	4	3	14
+FMDALA_10765	bacilysin biosynthesis protein BacA	ACM68686.1_aerD_MicrocystisaeruginosaNIES-98_aeruginosin98-A,aeruginosin98-B,aeruginosin98-C	ctg266_3	FALSE	FALSE	TRUE	aeruginosin 98-A, aeruginosin 98-B, aeruginosin 98-C	NRP	Microcystis aeruginosa NIES-98	aerD	Aeruginosin-Microcystis	other	5	3	14
+FMDALA_10770	Cupin domain-containing protein	ACM68687.1_aerE_MicrocystisaeruginosaNIES-98_aeruginosin98-A,aeruginosin98-B,aeruginosin98-C	ctg266_4	FALSE	FALSE	TRUE	aeruginosin 98-A, aeruginosin 98-B, aeruginosin 98-C	NRP	Microcystis aeruginosa NIES-98	aerE	Aeruginosin-Microcystis	other	6	3	14
+FMDALA_10775	short-chain dehydrogenase	ACM68688.1_aerF_MicrocystisaeruginosaNIES-98_aeruginosin98-A,aeruginosin98-B,aeruginosin98-C	ctg266_5	FALSE	FALSE	TRUE	aeruginosin 98-A, aeruginosin 98-B, aeruginosin 98-C	NRP	Microcystis aeruginosa NIES-98	aerF	Aeruginosin-Microcystis	additional	7	3	14
+FMDALA_10780	AerL	ACM68689.1_aerL_MicrocystisaeruginosaNIES-98_aeruginosin98-A,aeruginosin98-B,aeruginosin98-C	ctg266_6	FALSE	FALSE	TRUE	aeruginosin 98-A, aeruginosin 98-B, aeruginosin 98-C	NRP	Microcystis aeruginosa NIES-98	aerL	Aeruginosin-Microcystis	other	8	3	14
+FMDALA_10785	non-ribosomal peptide synthetase	ACM68690.1_aerG1_MicrocystisaeruginosaNIES-98_aeruginosin98-A,aeruginosin98-B,aeruginosin98-C	ctg266_7	FALSE	FALSE	TRUE	aeruginosin 98-A, aeruginosin 98-B, aeruginosin 98-C	NRP	Microcystis aeruginosa NIES-98	aerG1	Aeruginosin-Microcystis	core	9	3	14
+FMDALA_10790	oxidoreductase	ACM68692.1_ACM68692.1_MicrocystisaeruginosaNIES-98_aeruginosin98-A,aeruginosin98-B,aeruginosin98-C	ctg266_8	FALSE	FALSE	TRUE	aeruginosin 98-A, aeruginosin 98-B, aeruginosin 98-C	NRP	Microcystis aeruginosa NIES-98	ACM68692.1	Aeruginosin-Microcystis	additional	11	3	14
+FMDALA_10800	2,3,4,5-tetrahydropyridine-2,6-dicarboxylate N-acetyltransferase	ACM68693.1_ACM68693.1_MicrocystisaeruginosaNIES-98_aeruginosin98-A,aeruginosin98-B,aeruginosin98-C	ctg266_10	FALSE	FALSE	TRUE	aeruginosin 98-A, aeruginosin 98-B, aeruginosin 98-C	NRP	Microcystis aeruginosa NIES-98	ACM68693.1	Aeruginosin-Microcystis	additional	13	3	14
+FMDALA_10805	ABC transporter	ACM68694.1_aerN_MicrocystisaeruginosaNIES-98_aeruginosin98-A,aeruginosin98-B,aeruginosin98-C	ctg266_11	FALSE	FALSE	TRUE	aeruginosin 98-A, aeruginosin 98-B, aeruginosin 98-C	NRP	Microcystis aeruginosa NIES-98	aerN	Aeruginosin-Microcystis	transport	14	3	14
+FMDALA_10435	hypothetical protein	AED99430.1_AED99430.1_PlanktothrixagardhiiNIES-596_prenylagaramideB,prenylagaramideC	ctg21_2	FALSE	FALSE	TRUE	prenylagaramide B, prenylagaramide C	Lanthipeptide	Planktothrix agardhii NIES-596	AED99430.1	Prenylagaramide-Planktothrix	other	7	2	23
+FMDALA_17780	Putative restriction endonuclease	AFK79997.1_AFK79997.1_MicrocystisaeruginosaPCC7005_piricyclamide7005E1,piricyclamide7005E2,piricyclamide7005E3,piricyclamide7005E4	ctg159_4	FALSE	FALSE	TRUE	piricyclamide 7005E1, piricyclamide 7005E2, piricyclamide 7005E3, piricyclamide 7005E4	RiPP	Microcystis aeruginosa PCC 7005	AFK79997.1	Piricyclamide-Microcystis	other	11	2	12
+FMDALA_21880	MvdC family ATP-grasp ribosomal peptide maturase	CAQ16117.1_mdnB_MicrocystisaeruginosaNIES-298_microviridinB	NA	FALSE	TRUE	FALSE	microviridin B	Microviridin	Microcystis aeruginosa NIES-298	mdnB	Microviridin B-Microcystis	other	2	1	5
+FMDALA_21870	MvdD family ATP-grasp ribosomal peptide maturase	CAQ16118.1_mdnC_MicrocystisaeruginosaNIES-298_microviridinB	NA	FALSE	TRUE	FALSE	microviridin B	Microviridin	Microcystis aeruginosa NIES-298	mdnC	Microviridin B-Microcystis	other	3	1	5
+FMDALA_21865	N-acetyltransferase	CAQ16119.1_mdnD_MicrocystisaeruginosaNIES-298_microviridinB	NA	FALSE	TRUE	FALSE	microviridin B	Microviridin	Microcystis aeruginosa NIES-298	mdnD	Microviridin B-Microcystis	additional	4	1	5
+FMDALA_23395	ABC transporter	CAQ16120.1_mdnE_MicrocystisaeruginosaNIES-298_microviridinB	NA	FALSE	TRUE	FALSE	microviridin B	Microviridin	Microcystis aeruginosa NIES-298	mdnE	Microviridin B-Microcystis	transport	5	1	5
+FMDALA_15370	Membrane protein	ctg105_2_Anabaenopeptin_16_0	NA	FALSE	TRUE	FALSE	Anabaenopeptin	NRP	Microcystis aeruginosa WLECC	ctg105_2	Anabaenopeptin-Microcystis aeruginosa WLECC	other	2	5	16
+FMDALA_15365	flavin oxidoreductase	ctg105_3_Anabaenopeptin_16_0	NA	FALSE	TRUE	FALSE	Anabaenopeptin	NRP	Microcystis aeruginosa WLECC	ctg105_3	Anabaenopeptin-Microcystis aeruginosa WLECC	additional	3	5	16
+FMDALA_15355	hypothetical protein	ctg105_5_Anabaenopeptin_16_0	NA	FALSE	TRUE	FALSE	Anabaenopeptin	NRP	Microcystis aeruginosa WLECC	ctg105_5	Anabaenopeptin-Microcystis aeruginosa WLECC	other	5	5	16
+FMDALA_15350	DUF1995 domain-containing protein	ctg105_6_Anabaenopeptin_16_0	NA	FALSE	TRUE	FALSE	Anabaenopeptin	NRP	Microcystis aeruginosa WLECC	ctg105_6	Anabaenopeptin-Microcystis aeruginosa WLECC	other	6	5	16
+FMDALA_09650	Transposase	ctg115_1_Cyanobactin_90_0	NA	FALSE	TRUE	FALSE	Cyanobactin	Cyanobactin	Microcystis aeruginosa WLECC	ctg115_1	Cyanobactin-Microcystis aeruginosa WLECC	other	1	1	3
+FMDALA_20525	DNA-binding response regulator	ctg13_10_Cyanobactin_64_0	NA	FALSE	TRUE	FALSE	Cyanobactin	Cyanobactin	Microcystis aeruginosa WLECC	ctg13_10	Cyanobactin-Microcystis aeruginosa WLECC	regulatory	10	1	13
+FMDALA_20530	protein tyrosine phosphatase	ctg13_11_Cyanobactin_64_0	NA	FALSE	TRUE	FALSE	Cyanobactin	Cyanobactin	Microcystis aeruginosa WLECC	ctg13_11	Cyanobactin-Microcystis aeruginosa WLECC	other	11	1	13
+FMDALA_20535	hypothetical protein	ctg13_12_Cyanobactin_64_0	NA	FALSE	TRUE	FALSE	Cyanobactin	Cyanobactin	Microcystis aeruginosa WLECC	ctg13_12	Cyanobactin-Microcystis aeruginosa WLECC	other	12	1	13
+FMDALA_20540	DUF2834 domain-containing protein	ctg13_13_Cyanobactin_64_0	NA	FALSE	TRUE	FALSE	Cyanobactin	Cyanobactin	Microcystis aeruginosa WLECC	ctg13_13	Cyanobactin-Microcystis aeruginosa WLECC	other	13	1	13
+FMDALA_10480	PatA/PatG family cyanobactin maturation protease	ctg13_1_Cyanobactin_64_0	ctg21_11	FALSE	FALSE	TRUE	Cyanobactin	Cyanobactin	Microcystis aeruginosa WLECC	ctg13_1	Cyanobactin-Microcystis aeruginosa WLECC	core	1	1	13
+FMDALA_10445	Putative restriction endonuclease	ctg13_2_Cyanobactin_64_0	ctg21_4	FALSE	FALSE	TRUE	Cyanobactin	Cyanobactin	Microcystis aeruginosa WLECC	ctg13_2	Cyanobactin-Microcystis aeruginosa WLECC	other	2	1	13
+FMDALA_05515	DUF29 domain-containing protein	ctg13_3_Cyanobactin_64_0	NA	FALSE	TRUE	FALSE	Cyanobactin	Cyanobactin	Microcystis aeruginosa WLECC	ctg13_3	Cyanobactin-Microcystis aeruginosa WLECC	other	3	1	13
+FMDALA_10455	Uma2 family endonuclease	ctg13_4_Cyanobactin_64_0	ctg21_6	FALSE	FALSE	TRUE	Cyanobactin	Cyanobactin	Microcystis aeruginosa WLECC	ctg13_4	Cyanobactin-Microcystis aeruginosa WLECC	other	4	1	13
+FMDALA_05510	anacyclamide synthesis protein AcyF	ctg13_5_Cyanobactin_64_0	NA	FALSE	TRUE	FALSE	Cyanobactin	Cyanobactin	Microcystis aeruginosa WLECC	ctg13_5	Cyanobactin-Microcystis aeruginosa WLECC	other	5	1	13
+FMDALA_10440	transposase	ctg13_6_Cyanobactin_64_0	ctg21_3	FALSE	FALSE	TRUE	Cyanobactin	Cyanobactin	Microcystis aeruginosa WLECC	ctg13_6	Cyanobactin-Microcystis aeruginosa WLECC	other	6	1	13
+FMDALA_03865	imidazole glycerol phosphate synthase subunit HisH	ctg13_7_Cyanobactin_64_0	NA	FALSE	TRUE	FALSE	Cyanobactin	Cyanobactin	Microcystis aeruginosa WLECC	ctg13_7	Cyanobactin-Microcystis aeruginosa WLECC	other	7	1	13
+FMDALA_03870	ABC transporter ATP-binding protein	ctg13_8_Cyanobactin_64_0	NA	FALSE	TRUE	FALSE	Cyanobactin	Cyanobactin	Microcystis aeruginosa WLECC	ctg13_8	Cyanobactin-Microcystis aeruginosa WLECC	transport	8	1	13
+FMDALA_20520	branched-chain amino acid ABC transporter permease	ctg13_9_Cyanobactin_64_0	NA	FALSE	TRUE	FALSE	Cyanobactin	Cyanobactin	Microcystis aeruginosa WLECC	ctg13_9	Cyanobactin-Microcystis aeruginosa WLECC	other	9	1	13
+FMDALA_16795	oxidoreductase	ctg20_13_NRPS-T1PKS_26_0	NA	FALSE	TRUE	FALSE	NRPS-T1PKS	NRP, Polyketide	Microcystis aeruginosa WLECC	ctg20_13	NRPS-T1PKS-Microcystis aeruginosa WLECC	additional	13	3	15
+FMDALA_16790	LprI domain-containing protein	ctg20_14_NRPS-T1PKS_26_0	NA	FALSE	TRUE	FALSE	NRPS-T1PKS	NRP, Polyketide	Microcystis aeruginosa WLECC	ctg20_14	NRPS-T1PKS-Microcystis aeruginosa WLECC	other	14	3	15
+FMDALA_16780	HAD family phosphatase	ctg20_15_NRPS-T1PKS_26_0	NA	FALSE	TRUE	FALSE	NRPS-T1PKS	NRP, Polyketide	Microcystis aeruginosa WLECC	ctg20_15	NRPS-T1PKS-Microcystis aeruginosa WLECC	additional	15	3	15
+FMDALA_10220	rhodanese-related sulfurtransferase	ctg20_3_samp_2073_1151163_NRPS	NA	FALSE	TRUE	FALSE	NRP	NRPS	Dolichospermum	ctg20_3_samp_2073	NRPS3_WLEADA	additional	3	2	28
+FMDALA_15595	phytoene synthase	ctg27_10_T1PKS-Terpene_11_0	ctg403_4	FALSE	FALSE	TRUE	T1PKS-Terpene	Hybrid	Microcystis aeruginosa WLECC	ctg27_10	T1PKS-Terpene-Microcystis aeruginosa WLECC	core	10	2	42
+FMDALA_15590	hypothetical protein	ctg27_11_T1PKS-Terpene_11_0	ctg403_3	FALSE	FALSE	TRUE	T1PKS-Terpene	Hybrid	Microcystis aeruginosa WLECC	ctg27_11	T1PKS-Terpene-Microcystis aeruginosa WLECC	other	11	2	42
+FMDALA_15585	Similarity	ctg27_12_T1PKS-Terpene_11_0	ctg403_2	FALSE	FALSE	TRUE	T1PKS-Terpene	Hybrid	Microcystis aeruginosa WLECC	ctg27_12	T1PKS-Terpene-Microcystis aeruginosa WLECC	other	12	2	42
+FMDALA_15580	hypothetical protein	ctg27_13_T1PKS-Terpene_11_0	ctg403_1	FALSE	FALSE	TRUE	T1PKS-Terpene	Hybrid	Microcystis aeruginosa WLECC	ctg27_13	T1PKS-Terpene-Microcystis aeruginosa WLECC	other	13	2	42
+FMDALA_01970	Putative restriction endonuclease	ctg27_15_T1PKS-Terpene_11_0	NA	FALSE	TRUE	FALSE	T1PKS-Terpene	Hybrid	Microcystis aeruginosa WLECC	ctg27_15	T1PKS-Terpene-Microcystis aeruginosa WLECC	other	15	2	42
+FMDALA_01975	Enediyne biosynthesis protein UnbU	ctg27_16_T1PKS-Terpene_11_0	NA	FALSE	TRUE	FALSE	T1PKS-Terpene	Hybrid	Microcystis aeruginosa WLECC	ctg27_16	T1PKS-Terpene-Microcystis aeruginosa WLECC	other	16	2	42
+FMDALA_22155	lipoprotein NlpI	ctg27_2_T1PKS-Terpene_11_0	NA	FALSE	TRUE	FALSE	T1PKS-Terpene	Hybrid	Microcystis aeruginosa WLECC	ctg27_2	T1PKS-Terpene-Microcystis aeruginosa WLECC	other	2	2	42
+FMDALA_09375	transposase	ctg27_30_T1PKS-Terpene_11_0	NA	FALSE	TRUE	FALSE	T1PKS-Terpene	Hybrid	Microcystis aeruginosa WLECC	ctg27_30	T1PKS-Terpene-Microcystis aeruginosa WLECC	other	30	2	42
+FMDALA_17410	ABC transporter permease	ctg27_32_T1PKS-Terpene_11_0	NA	FALSE	TRUE	FALSE	T1PKS-Terpene	Hybrid	Microcystis aeruginosa WLECC	ctg27_32	T1PKS-Terpene-Microcystis aeruginosa WLECC	other	32	2	42
+FMDALA_17415	hypothetical protein	ctg27_33_T1PKS-Terpene_11_0	NA	FALSE	TRUE	FALSE	T1PKS-Terpene	Hybrid	Microcystis aeruginosa WLECC	ctg27_33	T1PKS-Terpene-Microcystis aeruginosa WLECC	other	33	2	42
+FMDALA_17420	phosphoadenosine phosphosulfate reductase	ctg27_34_T1PKS-Terpene_11_0	NA	FALSE	TRUE	FALSE	T1PKS-Terpene	Hybrid	Microcystis aeruginosa WLECC	ctg27_34	T1PKS-Terpene-Microcystis aeruginosa WLECC	other	34	2	42
+FMDALA_17425	hydrolase	ctg27_35_T1PKS-Terpene_11_0	NA	FALSE	TRUE	FALSE	T1PKS-Terpene	Hybrid	Microcystis aeruginosa WLECC	ctg27_35	T1PKS-Terpene-Microcystis aeruginosa WLECC	additional	35	2	42
+FMDALA_17430	BrnT family toxin	ctg27_37_T1PKS-Terpene_11_0	NA	FALSE	TRUE	FALSE	T1PKS-Terpene	Hybrid	Microcystis aeruginosa WLECC	ctg27_37	T1PKS-Terpene-Microcystis aeruginosa WLECC	other	37	2	42
+FMDALA_17435	hypothetical protein	ctg27_38_T1PKS-Terpene_11_0	NA	FALSE	TRUE	FALSE	T1PKS-Terpene	Hybrid	Microcystis aeruginosa WLECC	ctg27_38	T1PKS-Terpene-Microcystis aeruginosa WLECC	other	38	2	42
+FMDALA_17440	hypothetical protein	ctg27_39_T1PKS-Terpene_11_0	NA	FALSE	TRUE	FALSE	T1PKS-Terpene	Hybrid	Microcystis aeruginosa WLECC	ctg27_39	T1PKS-Terpene-Microcystis aeruginosa WLECC	other	39	2	42
+FMDALA_22150	DEAD/DEAH box helicase	ctg27_3_T1PKS-Terpene_11_0	NA	FALSE	TRUE	FALSE	T1PKS-Terpene	Hybrid	Microcystis aeruginosa WLECC	ctg27_3	T1PKS-Terpene-Microcystis aeruginosa WLECC	other	3	2	42
+FMDALA_17450	GTPase	ctg27_40_T1PKS-Terpene_11_0	NA	FALSE	TRUE	FALSE	T1PKS-Terpene	Hybrid	Microcystis aeruginosa WLECC	ctg27_40	T1PKS-Terpene-Microcystis aeruginosa WLECC	other	40	2	42
+FMDALA_17455	3'(2'),5'-bisphosphate nucleotidase CysQ	ctg27_41_T1PKS-Terpene_11_0	NA	FALSE	TRUE	FALSE	T1PKS-Terpene	Hybrid	Microcystis aeruginosa WLECC	ctg27_41	T1PKS-Terpene-Microcystis aeruginosa WLECC	additional	41	2	42
+FMDALA_22145	diguanylate cyclase response regulator	ctg27_4_T1PKS-Terpene_11_0	NA	FALSE	TRUE	FALSE	T1PKS-Terpene	Hybrid	Microcystis aeruginosa WLECC	ctg27_4	T1PKS-Terpene-Microcystis aeruginosa WLECC	regulatory	4	2	42
+FMDALA_22140	ABC transporter substrate-binding protein	ctg27_5_T1PKS-Terpene_11_0	NA	FALSE	TRUE	FALSE	T1PKS-Terpene	Hybrid	Microcystis aeruginosa WLECC	ctg27_5	T1PKS-Terpene-Microcystis aeruginosa WLECC	additional	5	2	42
+FMDALA_22135	Tetratricopeptide TPR_1 repeat-containing protein	ctg27_6_T1PKS-Terpene_11_0	NA	FALSE	TRUE	FALSE	T1PKS-Terpene	Hybrid	Microcystis aeruginosa WLECC	ctg27_6	T1PKS-Terpene-Microcystis aeruginosa WLECC	other	6	2	42
+FMDALA_22130	SLC13 family permease	ctg27_7_T1PKS-Terpene_11_0	NA	FALSE	TRUE	FALSE	T1PKS-Terpene	Hybrid	Microcystis aeruginosa WLECC	ctg27_7	T1PKS-Terpene-Microcystis aeruginosa WLECC	other	7	2	42
+FMDALA_22125	magnesium-transporting ATPase	ctg27_8_T1PKS-Terpene_11_0	NA	FALSE	TRUE	FALSE	T1PKS-Terpene	Hybrid	Microcystis aeruginosa WLECC	ctg27_8	T1PKS-Terpene-Microcystis aeruginosa WLECC	other	8	2	42
+FMDALA_15600	15-cis-phytoene desaturase	ctg27_9_T1PKS-Terpene_11_0	ctg403_5	FALSE	FALSE	TRUE	T1PKS-Terpene	Hybrid	Microcystis aeruginosa WLECC	ctg27_9	T1PKS-Terpene-Microcystis aeruginosa WLECC	additional	9	2	42
+FMDALA_11495	Dolichyl-phosphate-mannose-protein mannosyltransferase	ctg28_2_RiPP-like_84_0	NA	FALSE	TRUE	FALSE	RiPP-like	RiPP	Microcystis aeruginosa WLECC	ctg28_2	RiPP-like-Microcystis aeruginosa WLECC	other	2	1	7
+FMDALA_11500	Glycogen debranching protein	ctg28_3_RiPP-like_84_0	NA	FALSE	TRUE	FALSE	RiPP-like	RiPP	Microcystis aeruginosa WLECC	ctg28_3	RiPP-like-Microcystis aeruginosa WLECC	other	3	1	7
+FMDALA_05090	hypothetical protein	ctg30_10_Novel-T3PKS_28_0	NA	FALSE	TRUE	FALSE	Novel-T3PKS	Polyketide	Microcystis aeruginosa WLECC	ctg30_10	Novel-T3PKS-Microcystis aeruginosa WLECC	other	10	1	18
+FMDALA_05095	WD40 repeat domain-containing protein	ctg30_11_Novel-T3PKS_28_0	NA	FALSE	TRUE	FALSE	Novel-T3PKS	Polyketide	Microcystis aeruginosa WLECC	ctg30_11	Novel-T3PKS-Microcystis aeruginosa WLECC	other	11	1	18
+FMDALA_05100	ribonuclease III	ctg30_12_Novel-T3PKS_28_0	NA	FALSE	TRUE	FALSE	Novel-T3PKS	Polyketide	Microcystis aeruginosa WLECC	ctg30_12	Novel-T3PKS-Microcystis aeruginosa WLECC	other	12	1	18
+FMDALA_05110	alpha/beta hydrolase	ctg30_13_Novel-T3PKS_28_0	NA	FALSE	TRUE	FALSE	Novel-T3PKS	Polyketide	Microcystis aeruginosa WLECC	ctg30_13	Novel-T3PKS-Microcystis aeruginosa WLECC	additional	13	1	18
+FMDALA_05115	histidine kinase	ctg30_14_Novel-T3PKS_28_0	NA	FALSE	TRUE	FALSE	Novel-T3PKS	Polyketide	Microcystis aeruginosa WLECC	ctg30_14	Novel-T3PKS-Microcystis aeruginosa WLECC	transport	14	1	18
+FMDALA_05120	DUF1957 domain-containing protein	ctg30_15_Novel-T3PKS_28_0	NA	FALSE	TRUE	FALSE	Novel-T3PKS	Polyketide	Microcystis aeruginosa WLECC	ctg30_15	Novel-T3PKS-Microcystis aeruginosa WLECC	other	15	1	18
+FMDALA_07925	carotenoid biosynthesis protein	ctg30_17_Novel-T3PKS_28_0	NA	FALSE	TRUE	FALSE	Novel-T3PKS	Polyketide	Microcystis aeruginosa WLECC	ctg30_17	Novel-T3PKS-Microcystis aeruginosa WLECC	other	17	1	18
+FMDALA_12325	ATP-binding protein syrD	ctg30_2_Novel-T3PKS_28_0	NA	FALSE	TRUE	FALSE	Novel-T3PKS	Polyketide	Microcystis aeruginosa WLECC	ctg30_2	Novel-T3PKS-Microcystis aeruginosa WLECC	transport	2	1	18
+FMDALA_12320	efflux transporter periplasmic adaptor subunit	ctg30_3_Novel-T3PKS_28_0	NA	FALSE	TRUE	FALSE	Novel-T3PKS	Polyketide	Microcystis aeruginosa WLECC	ctg30_3	Novel-T3PKS-Microcystis aeruginosa WLECC	transport	3	1	18
+FMDALA_12315	aluminum resistance family protein	ctg30_5_Novel-T3PKS_28_0	NA	FALSE	TRUE	FALSE	Novel-T3PKS	Polyketide	Microcystis aeruginosa WLECC	ctg30_5	Novel-T3PKS-Microcystis aeruginosa WLECC	other	5	1	18
+FMDALA_12305	Uncharacterized protein sll0103	ctg30_6_Novel-T3PKS_28_0	NA	FALSE	TRUE	FALSE	Novel-T3PKS	Polyketide	Microcystis aeruginosa WLECC	ctg30_6	Novel-T3PKS-Microcystis aeruginosa WLECC	other	6	1	18
+FMDALA_07750	resolvase	ctg30_8_Novel-T3PKS_28_0	NA	FALSE	TRUE	FALSE	Novel-T3PKS	Polyketide	Microcystis aeruginosa WLECC	ctg30_8	Novel-T3PKS-Microcystis aeruginosa WLECC	other	8	1	18
+FMDALA_07745	glutamate--cysteine ligase	ctg30_9_Novel-T3PKS_28_0	NA	FALSE	TRUE	FALSE	Novel-T3PKS	Polyketide	Microcystis aeruginosa WLECC	ctg30_9	Novel-T3PKS-Microcystis aeruginosa WLECC	additional	9	1	18
+FMDALA_23575	glycine cleavage system aminomethyltransferase GcvT	ctg34_19_Bartoloside-T1PKS_18_0	NA	FALSE	TRUE	FALSE	Bartoloside-T1PKS	Polyketide	Microcystis aeruginosa WLECC	ctg34_19	Bartoloside-like-T1PKS-Microcystis aeruginosa WLECC	other	19	1	28
+FMDALA_07475	ATP-dependent sacrificial sulfur transferase LarE	ctg34_20_Bartoloside-T1PKS_18_0	NA	FALSE	TRUE	FALSE	Bartoloside-T1PKS	Polyketide	Microcystis aeruginosa WLECC	ctg34_20	Bartoloside-like-T1PKS-Microcystis aeruginosa WLECC	other	20	1	28
+FMDALA_05795	DUF5615 domain-containing protein	ctg34_21_Bartoloside-T1PKS_18_0	NA	FALSE	TRUE	FALSE	Bartoloside-T1PKS	Polyketide	Microcystis aeruginosa WLECC	ctg34_21	Bartoloside-like-T1PKS-Microcystis aeruginosa WLECC	other	21	1	28
+FMDALA_05800	hypothetical protein	ctg34_22_Bartoloside-T1PKS_18_0	NA	FALSE	TRUE	FALSE	Bartoloside-T1PKS	Polyketide	Microcystis aeruginosa WLECC	ctg34_22	Bartoloside-like-T1PKS-Microcystis aeruginosa WLECC	other	22	1	28
+FMDALA_15915	DUF4351 domain-containing protein	ctg34_26_Bartoloside-T1PKS_18_0	NA	FALSE	TRUE	FALSE	Bartoloside-T1PKS	Polyketide	Microcystis aeruginosa WLECC	ctg34_26	Bartoloside-like-T1PKS-Microcystis aeruginosa WLECC	other	26	1	28
+FMDALA_13860	hypothetical protein	ctg34_2_Bartoloside-T1PKS_18_0	NA	FALSE	TRUE	FALSE	Bartoloside-T1PKS	Polyketide	Microcystis aeruginosa WLECC	ctg34_2	Bartoloside-like-T1PKS-Microcystis aeruginosa WLECC	other	2	1	28
+FMDALA_17125	NFACT N-terminal and middle domains	ctg34_5_Bartoloside-T1PKS_18_0	NA	FALSE	TRUE	FALSE	Bartoloside-T1PKS	Polyketide	Microcystis aeruginosa WLECC	ctg34_5	Bartoloside-like-T1PKS-Microcystis aeruginosa WLECC	other	5	1	28
+FMDALA_17130	ABC transporter	ctg34_6_Bartoloside-T1PKS_18_0	ctg199_8	FALSE	FALSE	TRUE	Bartoloside-T1PKS	Polyketide	Microcystis aeruginosa WLECC	ctg34_6	Bartoloside-like-T1PKS-Microcystis aeruginosa WLECC	transport	6	1	28
+FMDALA_17135	ABC transporter permease DevC	ctg34_7_Bartoloside-T1PKS_18_0	ctg199_9	FALSE	FALSE	TRUE	Bartoloside-T1PKS	Polyketide	Microcystis aeruginosa WLECC	ctg34_7	Bartoloside-like-T1PKS-Microcystis aeruginosa WLECC	other	7	1	28
+FMDALA_16105	hypothetical protein	ctg36_2_NRPS-like_34_0	NA	FALSE	TRUE	FALSE	NRPS-like	NRP	Microcystis aeruginosa WLECC	ctg36_2	NRPS-like-1-Microcystis aeruginosa WLECC	other	2	1	10
+FMDALA_00475	hypothetical protein	ctg36_3_NRPS-like_34_0	NA	FALSE	TRUE	FALSE	NRPS-like	NRP	Microcystis aeruginosa WLECC	ctg36_3	NRPS-like-1-Microcystis aeruginosa WLECC	other	3	1	10
+FMDALA_00485	methylthioribulose 1-phosphate dehydratase	ctg36_4_NRPS-like_34_0	NA	FALSE	TRUE	FALSE	NRPS-like	NRP	Microcystis aeruginosa WLECC	ctg36_4	NRPS-like-1-Microcystis aeruginosa WLECC	other	4	1	10
+FMDALA_00490	hypothetical protein	ctg36_5_NRPS-like_34_0	NA	FALSE	TRUE	FALSE	NRPS-like	NRP	Microcystis aeruginosa WLECC	ctg36_5	NRPS-like-1-Microcystis aeruginosa WLECC	other	5	1	10
+FMDALA_00500	recombinase B	ctg36_6_NRPS-like_34_0	NA	FALSE	TRUE	FALSE	NRPS-like	NRP	Microcystis aeruginosa WLECC	ctg36_6	NRPS-like-1-Microcystis aeruginosa WLECC	other	6	1	10
+FMDALA_00505	cysteine lyase	ctg36_7_NRPS-like_34_0	NA	FALSE	TRUE	FALSE	NRPS-like	NRP	Microcystis aeruginosa WLECC	ctg36_7	NRPS-like-1-Microcystis aeruginosa WLECC	additional	7	1	10
+FMDALA_23050	helicase	ctg36_8_NRPS-like_34_0	NA	FALSE	TRUE	FALSE	NRPS-like	NRP	Microcystis aeruginosa WLECC	ctg36_8	NRPS-like-1-Microcystis aeruginosa WLECC	other	8	1	10
+FMDALA_23055	DUF29 domain-containing protein	ctg36_9_NRPS-like_34_0	NA	FALSE	TRUE	FALSE	NRPS-like	NRP	Microcystis aeruginosa WLECC	ctg36_9	NRPS-like-1-Microcystis aeruginosa WLECC	other	9	1	10
+FMDALA_17815	DUF29 domain-containing protein	ctg39_10_Cyanobactin_50_0	ctg159_10	FALSE	FALSE	TRUE	Cyanobactin	Cyanobactin	Microcystis aeruginosa WLECC	ctg39_10	Cyanobactin-Microcystis aeruginosa WLECC	other	10	2	15
+FMDALA_17820	DUF262 domain-containing protein	ctg39_11_Cyanobactin_50_0	ctg159_11	FALSE	FALSE	TRUE	Cyanobactin	Cyanobactin	Microcystis aeruginosa WLECC	ctg39_11	Cyanobactin-Microcystis aeruginosa WLECC	other	11	2	15
+FMDALA_17825	endoribonuclease	ctg39_12_Cyanobactin_50_0	ctg159_12	FALSE	FALSE	TRUE	Cyanobactin	Cyanobactin	Microcystis aeruginosa WLECC	ctg39_12	Cyanobactin-Microcystis aeruginosa WLECC	other	12	2	15
+FMDALA_17830	reactive intermediate/imine deaminase	ctg39_13_Cyanobactin_50_0	ctg159_13	FALSE	FALSE	TRUE	Cyanobactin	Cyanobactin	Microcystis aeruginosa WLECC	ctg39_13	Cyanobactin-Microcystis aeruginosa WLECC	other	13	2	15
+FMDALA_17835	DNA-directed RNA polymerase subunit gamma	ctg39_14_Cyanobactin_50_0	ctg159_14	FALSE	FALSE	TRUE	Cyanobactin	Cyanobactin	Microcystis aeruginosa WLECC	ctg39_14	Cyanobactin-Microcystis aeruginosa WLECC	other	14	2	15
+FMDALA_17765	Putative peptidase PatA-like protein	ctg39_1_Cyanobactin_50_0	ctg159_1	FALSE	FALSE	TRUE	Cyanobactin	Cyanobactin	Microcystis aeruginosa WLECC	ctg39_1	Cyanobactin-Microcystis aeruginosa WLECC	core	1	2	15
+FMDALA_17770	cyanobactin biosynthesis system PatB/AcyB/McaB family protein	ctg39_2_Cyanobactin_50_0	ctg159_2	FALSE	FALSE	TRUE	Cyanobactin	Cyanobactin	Microcystis aeruginosa WLECC	ctg39_2	Cyanobactin-Microcystis aeruginosa WLECC	other	2	2	15
+FMDALA_17775	hypothetical protein	ctg39_3_Cyanobactin_50_0	ctg159_3	FALSE	FALSE	TRUE	Cyanobactin	Cyanobactin	Microcystis aeruginosa WLECC	ctg39_3	Cyanobactin-Microcystis aeruginosa WLECC	other	3	2	15
+FMDALA_17785	peptidase S8	ctg39_5_Cyanobactin_50_0	ctg159_5	FALSE	FALSE	TRUE	Cyanobactin	Cyanobactin	Microcystis aeruginosa WLECC	ctg39_5	Cyanobactin-Microcystis aeruginosa WLECC	core	5	2	15
+FMDALA_17795	Light-repressed protein A	ctg39_6_Cyanobactin_50_0	ctg159_6	FALSE	FALSE	TRUE	Cyanobactin	Cyanobactin	Microcystis aeruginosa WLECC	ctg39_6	Cyanobactin-Microcystis aeruginosa WLECC	other	6	2	15
+FMDALA_17800	heat-shock protein	ctg39_7_Cyanobactin_50_0	ctg159_7	FALSE	FALSE	TRUE	Cyanobactin	Cyanobactin	Microcystis aeruginosa WLECC	ctg39_7	Cyanobactin-Microcystis aeruginosa WLECC	other	7	2	15
+FMDALA_17805	L-threonylcarbamoyladenylate synthase	ctg39_8_Cyanobactin_50_0	ctg159_8	FALSE	FALSE	TRUE	Cyanobactin	Cyanobactin	Microcystis aeruginosa WLECC	ctg39_8	Cyanobactin-Microcystis aeruginosa WLECC	other	8	2	15
+FMDALA_17810	nickel pincer cofactor biosynthesis protein LarC	ctg39_9_Cyanobactin_50_0	ctg159_9	FALSE	FALSE	TRUE	Cyanobactin	Cyanobactin	Microcystis aeruginosa WLECC	ctg39_9	Cyanobactin-Microcystis aeruginosa WLECC	other	9	2	15
+FMDALA_07115	recombinase RecQ	ctg3_13_lanthipeptide_54_0	NA	FALSE	TRUE	FALSE	lanthipeptide	Lanthipeptide	Microcystis aeruginosa WLECC	ctg3_13	lanthipeptide-Microcystis aeruginosa WLECC	other	16	1	20
+FMDALA_07120	DUF3285 domain-containing protein	ctg3_14_lanthipeptide_54_0	NA	FALSE	TRUE	FALSE	lanthipeptide	Lanthipeptide	Microcystis aeruginosa WLECC	ctg3_14	lanthipeptide-Microcystis aeruginosa WLECC	other	17	1	20
+FMDALA_07125	rRNA maturation RNase YbeY	ctg3_15_lanthipeptide_54_0	NA	FALSE	TRUE	FALSE	lanthipeptide	Lanthipeptide	Microcystis aeruginosa WLECC	ctg3_15	lanthipeptide-Microcystis aeruginosa WLECC	other	18	1	20
+FMDALA_07130	diacylglycerol kinase	ctg3_16_lanthipeptide_54_0	NA	FALSE	TRUE	FALSE	lanthipeptide	Lanthipeptide	Microcystis aeruginosa WLECC	ctg3_16	lanthipeptide-Microcystis aeruginosa WLECC	other	19	1	20
+FMDALA_07135	DUF4327 domain-containing protein	ctg3_17_lanthipeptide_54_0	NA	FALSE	TRUE	FALSE	lanthipeptide	Lanthipeptide	Microcystis aeruginosa WLECC	ctg3_17	lanthipeptide-Microcystis aeruginosa WLECC	other	20	1	20
+FMDALA_09920	clan AA aspartic protease	ctg3_4_lanthipeptide_54_0	NA	FALSE	TRUE	FALSE	lanthipeptide	Lanthipeptide	Microcystis aeruginosa WLECC	ctg3_4	lanthipeptide-Microcystis aeruginosa WLECC	other	6	1	20
+FMDALA_09925	hypothetical protein	ctg3_5_lanthipeptide_54_0	NA	FALSE	TRUE	FALSE	lanthipeptide	Lanthipeptide	Microcystis aeruginosa WLECC	ctg3_5	lanthipeptide-Microcystis aeruginosa WLECC	other	7	1	20
+FMDALA_00025	clan AA aspartic protease	ctg3_6_lanthipeptide_54_0	NA	FALSE	TRUE	FALSE	lanthipeptide	Lanthipeptide	Microcystis aeruginosa WLECC	ctg3_6	lanthipeptide-Microcystis aeruginosa WLECC	other	8	1	20
+FMDALA_00030	hypothetical protein	ctg3_7_lanthipeptide_54_0	NA	FALSE	TRUE	FALSE	lanthipeptide	Lanthipeptide	Microcystis aeruginosa WLECC	ctg3_7	lanthipeptide-Microcystis aeruginosa WLECC	other	9	1	20
+FMDALA_20260	hypothetical protein	ctg3_8_lanthipeptide_54_0	NA	FALSE	TRUE	FALSE	lanthipeptide	Lanthipeptide	Microcystis aeruginosa WLECC	ctg3_8	lanthipeptide-Microcystis aeruginosa WLECC	other	11	1	20
+FMDALA_19055	S-(hydroxymethyl)glutathione dehydrogenase/class III alcohol dehydrogenase	ctg44_17_1-heptadecene_20_0	NA	FALSE	TRUE	FALSE	1-heptadecene	NRP, Polyketide	Microcystis aeruginosa WLECC	ctg44_17	1-heptadecene-Microcystis aeruginosa WLECC	additional	17	1	18
+FMDALA_04570	5S ribosomal RNA	ctg44_1_1-heptadecene_20_0	NA	FALSE	TRUE	FALSE	1-heptadecene	NRP, Polyketide	Microcystis aeruginosa WLECC	ctg44_1	1-heptadecene-Microcystis aeruginosa WLECC	other	1	1	18
+FMDALA_11920	DUF2288 domain-containing protein	ctg44_2_1-heptadecene_20_0	NA	FALSE	TRUE	FALSE	1-heptadecene	NRP, Polyketide	Microcystis aeruginosa WLECC	ctg44_2	1-heptadecene-Microcystis aeruginosa WLECC	other	2	1	18
+FMDALA_02070	radical SAM protein	ctg44_8_1-heptadecene_20_0	NA	FALSE	TRUE	FALSE	1-heptadecene	NRP, Polyketide	Microcystis aeruginosa WLECC	ctg44_8	1-heptadecene-Microcystis aeruginosa WLECC	additional	8	1	18
+FMDALA_02065	penicillin-binding protein 2	ctg44_9_1-heptadecene_20_0	NA	FALSE	TRUE	FALSE	1-heptadecene	NRP, Polyketide	Microcystis aeruginosa WLECC	ctg44_9	1-heptadecene-Microcystis aeruginosa WLECC	other	9	1	18
+FMDALA_06050	GNAT family N-acetyltransferase	ctg5_14_RRE-containing_23_0	ctg73_12	FALSE	FALSE	TRUE	RRE-containing	RRE	Microcystis aeruginosa WLECC	ctg5_14	LAP-Microcystis aeruginosa WLECC	other	14	1	33
+FMDALA_06045	adenylate cyclase	ctg5_21_RRE-containing_23_0	ctg73_11	FALSE	FALSE	TRUE	RRE-containing	RRE	Microcystis aeruginosa WLECC	ctg5_21	LAP-Microcystis aeruginosa WLECC	core	21	1	33
+FMDALA_06550	ferredoxin	ctg5_26_RRE-containing_23_0	ctg433_3	FALSE	FALSE	TRUE	RRE-containing	RRE	Microcystis aeruginosa WLECC	ctg5_26	LAP-Microcystis aeruginosa WLECC	other	26	1	33
+FMDALA_06545	CTP synthase	ctg5_27_RRE-containing_23_0	ctg433_2	FALSE	FALSE	TRUE	RRE-containing	RRE	Microcystis aeruginosa WLECC	ctg5_27	LAP-Microcystis aeruginosa WLECC	other	27	1	33
+FMDALA_01595	hypothetical protein	ctg5_28_RRE-containing_23_0	NA	FALSE	TRUE	FALSE	RRE-containing	RRE	Microcystis aeruginosa WLECC	ctg5_28	LAP-Microcystis aeruginosa WLECC	other	28	1	33
+FMDALA_01600	ABC transporter permease	ctg5_29_RRE-containing_23_0	NA	FALSE	TRUE	FALSE	RRE-containing	RRE	Microcystis aeruginosa WLECC	ctg5_29	LAP-Microcystis aeruginosa WLECC	transport	29	1	33
+FMDALA_09760	BarH protein	ctg5_2_RRE-containing_23_0	ctg223_7	FALSE	FALSE	TRUE	RRE-containing	RRE	Microcystis aeruginosa WLECC	ctg5_2	LAP-Microcystis aeruginosa WLECC	other	2	1	33
+FMDALA_01605	ABC transporter substrate-binding protein	ctg5_30_RRE-containing_23_0	NA	FALSE	TRUE	FALSE	RRE-containing	RRE	Microcystis aeruginosa WLECC	ctg5_30	LAP-Microcystis aeruginosa WLECC	other	30	1	33
+FMDALA_01610	ABC transporter ATP-binding protein	ctg5_31_RRE-containing_23_0	NA	FALSE	TRUE	FALSE	RRE-containing	RRE	Microcystis aeruginosa WLECC	ctg5_31	LAP-Microcystis aeruginosa WLECC	transport	31	1	33
+FMDALA_01615	acyl-CoA dehydrogenase	ctg5_32_RRE-containing_23_0	NA	FALSE	TRUE	FALSE	RRE-containing	RRE	Microcystis aeruginosa WLECC	ctg5_32	LAP-Microcystis aeruginosa WLECC	additional	32	1	33
+FMDALA_01620	DUF4242 domain-containing protein	ctg5_33_RRE-containing_23_0	NA	FALSE	TRUE	FALSE	RRE-containing	RRE	Microcystis aeruginosa WLECC	ctg5_33	LAP-Microcystis aeruginosa WLECC	other	33	1	33
+FMDALA_09765	CopG family transcriptional regulator	ctg5_4_RRE-containing_23_0	ctg223_8	FALSE	FALSE	TRUE	RRE-containing	RRE	Microcystis aeruginosa WLECC	ctg5_4	LAP-Microcystis aeruginosa WLECC	other	4	1	33
+FMDALA_09770	hypothetical protein	ctg5_5_RRE-containing_23_0	ctg223_9	FALSE	FALSE	TRUE	RRE-containing	RRE	Microcystis aeruginosa WLECC	ctg5_5	LAP-Microcystis aeruginosa WLECC	other	5	1	33
+FMDALA_09390	thylakoid-associated protein	ctg71_10_T1PKS_51_0	NA	FALSE	TRUE	FALSE	T1PKS	Polyketide	Microcystis aeruginosa WLECC	ctg71_10	T1PKS-Microcystis aeruginosa WLECC	other	10	1	11
+FMDALA_09385	2TM domain-containing protein	ctg71_11_T1PKS_51_0	NA	FALSE	TRUE	FALSE	T1PKS	Polyketide	Microcystis aeruginosa WLECC	ctg71_11	T1PKS-Microcystis aeruginosa WLECC	other	11	1	11
+FMDALA_23005	hypothetical protein	ctg71_3_T1PKS_51_0	NA	FALSE	TRUE	FALSE	T1PKS	Polyketide	Microcystis aeruginosa WLECC	ctg71_3	T1PKS-Microcystis aeruginosa WLECC	other	3	1	11
+FMDALA_23010	AAA family ATPase	ctg71_4_T1PKS_51_0	NA	FALSE	TRUE	FALSE	T1PKS	Polyketide	Microcystis aeruginosa WLECC	ctg71_4	T1PKS-Microcystis aeruginosa WLECC	other	4	1	11
+FMDALA_23015	DUF1257 domain-containing protein	ctg71_5_T1PKS_51_0	NA	FALSE	TRUE	FALSE	T1PKS	Polyketide	Microcystis aeruginosa WLECC	ctg71_5	T1PKS-Microcystis aeruginosa WLECC	other	5	1	11
+FMDALA_23020	SAM-dependent methyltransferase	ctg71_6_T1PKS_51_0	NA	FALSE	TRUE	FALSE	T1PKS	Polyketide	Microcystis aeruginosa WLECC	ctg71_6	T1PKS-Microcystis aeruginosa WLECC	other	6	1	11
+FMDALA_09400	restriction endonuclease	ctg71_8_T1PKS_51_0	NA	FALSE	TRUE	FALSE	T1PKS	Polyketide	Microcystis aeruginosa WLECC	ctg71_8	T1PKS-Microcystis aeruginosa WLECC	other	8	1	11
+FMDALA_09395	alanine dehydrogenase	ctg71_9_T1PKS_51_0	NA	FALSE	TRUE	FALSE	T1PKS	Polyketide	Microcystis aeruginosa WLECC	ctg71_9	T1PKS-Microcystis aeruginosa WLECC	other	9	1	11
+FMDALA_17740	anti-sigma F factor antagonist	ctg82_10_T3PKS-Merocyclophane_5_0	NA	FALSE	TRUE	FALSE	T3PKS-Merocyclophane	NRP, Polyketide	Microcystis aeruginosa WLECC	ctg82_10	T3PKS-Merocyclophane-Microcystis aeruginosa WLECC	other	10	4	37
+FMDALA_17745	carbamoyl phosphate synthase small subunit	ctg82_11_T3PKS-Merocyclophane_5_0	NA	FALSE	TRUE	FALSE	T3PKS-Merocyclophane	NRP, Polyketide	Microcystis aeruginosa WLECC	ctg82_11	T3PKS-Merocyclophane-Microcystis aeruginosa WLECC	additional	11	4	37
+FMDALA_17750	Similar to tr|P74588|P74588	ctg82_12_T3PKS-Merocyclophane_5_0	NA	FALSE	TRUE	FALSE	T3PKS-Merocyclophane	NRP, Polyketide	Microcystis aeruginosa WLECC	ctg82_12	T3PKS-Merocyclophane-Microcystis aeruginosa WLECC	other	12	4	37
+FMDALA_17755	hypothetical protein	ctg82_27_T3PKS-Merocyclophane_5_0	NA	FALSE	TRUE	FALSE	T3PKS-Merocyclophane	NRP, Polyketide	Microcystis aeruginosa WLECC	ctg82_27	T3PKS-Merocyclophane-Microcystis aeruginosa WLECC	other	27	4	37
+FMDALA_17760	hypothetical protein	ctg82_28_T3PKS-Merocyclophane_5_0	NA	FALSE	TRUE	FALSE	T3PKS-Merocyclophane	NRP, Polyketide	Microcystis aeruginosa WLECC	ctg82_28	T3PKS-Merocyclophane-Microcystis aeruginosa WLECC	other	28	4	37
+FMDALA_19695	shikimate 5-dehydrogenase	ctg82_29_T3PKS-Merocyclophane_5_0	NA	FALSE	TRUE	FALSE	T3PKS-Merocyclophane	NRP, Polyketide	Microcystis aeruginosa WLECC	ctg82_29	T3PKS-Merocyclophane-Microcystis aeruginosa WLECC	other	29	4	37
+FMDALA_08260	transglutaminase	ctg82_2_T3PKS-Merocyclophane_5_0	NA	FALSE	TRUE	FALSE	T3PKS-Merocyclophane	NRP, Polyketide	Microcystis aeruginosa WLECC	ctg82_2	T3PKS-Merocyclophane-Microcystis aeruginosa WLECC	other	2	4	37
+FMDALA_19700	serine/threonine protein kinase	ctg82_30_T3PKS-Merocyclophane_5_0	NA	FALSE	TRUE	FALSE	T3PKS-Merocyclophane	NRP, Polyketide	Microcystis aeruginosa WLECC	ctg82_30	T3PKS-Merocyclophane-Microcystis aeruginosa WLECC	regulatory	30	4	37
+FMDALA_19705	rhodanese-related sulfurtransferase	ctg82_31_T3PKS-Merocyclophane_5_0	NA	FALSE	TRUE	FALSE	T3PKS-Merocyclophane	NRP, Polyketide	Microcystis aeruginosa WLECC	ctg82_31	T3PKS-Merocyclophane-Microcystis aeruginosa WLECC	other	31	4	37
+FMDALA_19715	DNA repair protein RecO	ctg82_32_T3PKS-Merocyclophane_5_0	NA	FALSE	TRUE	FALSE	T3PKS-Merocyclophane	NRP, Polyketide	Microcystis aeruginosa WLECC	ctg82_32	T3PKS-Merocyclophane-Microcystis aeruginosa WLECC	other	32	4	37
+FMDALA_19720	arabinose efflux permease	ctg82_33_T3PKS-Merocyclophane_5_0	NA	FALSE	TRUE	FALSE	T3PKS-Merocyclophane	NRP, Polyketide	Microcystis aeruginosa WLECC	ctg82_33	T3PKS-Merocyclophane-Microcystis aeruginosa WLECC	transport	33	4	37
+FMDALA_09310	Cytoplasmic protein	ctg82_34_T3PKS-Merocyclophane_5_0	NA	FALSE	TRUE	FALSE	T3PKS-Merocyclophane	NRP, Polyketide	Microcystis aeruginosa WLECC	ctg82_34	T3PKS-Merocyclophane-Microcystis aeruginosa WLECC	other	34	4	37
+FMDALA_16130	Uncharacterised protein family (UPF0175)	ctg82_35_T3PKS-Merocyclophane_5_0	NA	FALSE	TRUE	FALSE	T3PKS-Merocyclophane	NRP, Polyketide	Microcystis aeruginosa WLECC	ctg82_35	T3PKS-Merocyclophane-Microcystis aeruginosa WLECC	other	35	4	37
+FMDALA_16125	DUF3368 domain-containing protein	ctg82_36_T3PKS-Merocyclophane_5_0	NA	FALSE	TRUE	FALSE	T3PKS-Merocyclophane	NRP, Polyketide	Microcystis aeruginosa WLECC	ctg82_36	T3PKS-Merocyclophane-Microcystis aeruginosa WLECC	other	36	4	37
+FMDALA_17705	cysteine--tRNA ligase	ctg82_3_T3PKS-Merocyclophane_5_0	NA	FALSE	TRUE	FALSE	T3PKS-Merocyclophane	NRP, Polyketide	Microcystis aeruginosa WLECC	ctg82_3	T3PKS-Merocyclophane-Microcystis aeruginosa WLECC	other	3	4	37
+FMDALA_17710	glycine/betaine ABC transporter substrate-binding protein	ctg82_4_T3PKS-Merocyclophane_5_0	NA	FALSE	TRUE	FALSE	T3PKS-Merocyclophane	NRP, Polyketide	Microcystis aeruginosa WLECC	ctg82_4	T3PKS-Merocyclophane-Microcystis aeruginosa WLECC	transport	4	4	37
+FMDALA_17715	metal-binding protein	ctg82_5_T3PKS-Merocyclophane_5_0	NA	FALSE	TRUE	FALSE	T3PKS-Merocyclophane	NRP, Polyketide	Microcystis aeruginosa WLECC	ctg82_5	T3PKS-Merocyclophane-Microcystis aeruginosa WLECC	other	5	4	37
+FMDALA_17720	bifunctional orotidine-5'-phosphate decarboxylase/orotate phosphoribosyltransferase	ctg82_6_T3PKS-Merocyclophane_5_0	NA	FALSE	TRUE	FALSE	T3PKS-Merocyclophane	NRP, Polyketide	Microcystis aeruginosa WLECC	ctg82_6	T3PKS-Merocyclophane-Microcystis aeruginosa WLECC	other	6	4	37
+FMDALA_17725	hypothetical protein	ctg82_7_T3PKS-Merocyclophane_5_0	NA	FALSE	TRUE	FALSE	T3PKS-Merocyclophane	NRP, Polyketide	Microcystis aeruginosa WLECC	ctg82_7	T3PKS-Merocyclophane-Microcystis aeruginosa WLECC	other	7	4	37
+FMDALA_17730	23S rRNA (guanosine(2251)-2'-O)-methyltransferase RlmB	ctg82_8_T3PKS-Merocyclophane_5_0	NA	FALSE	TRUE	FALSE	T3PKS-Merocyclophane	NRP, Polyketide	Microcystis aeruginosa WLECC	ctg82_8	T3PKS-Merocyclophane-Microcystis aeruginosa WLECC	other	8	4	37
+FMDALA_17735	Mini-ribonuclease 3	ctg82_9_T3PKS-Merocyclophane_5_0	NA	FALSE	TRUE	FALSE	T3PKS-Merocyclophane	NRP, Polyketide	Microcystis aeruginosa WLECC	ctg82_9	T3PKS-Merocyclophane-Microcystis aeruginosa WLECC	other	9	4	37
+FMDALA_07040	alpha/beta hydrolase	ctg83_18_lanthipeptide_21_0	NA	FALSE	TRUE	FALSE	NA	NA	Dolichospermum	ctg83_18_lanthipeptide_21	NA	NA	NA	NA	1
+FMDALA_07030	ATP-dependent protease ATP-binding subunit ClpX	ctg83_19_lanthipeptide_21_0	NA	FALSE	TRUE	FALSE	lanthipeptide	Lanthipeptide	Microcystis aeruginosa WLECC	ctg83_19	lanthipeptide-Microcystis aeruginosa WLECC	other	19	2	25
+FMDALA_07025	ATP-dependent Clp endopeptidase proteolytic subunit ClpP	ctg83_20_lanthipeptide_21_0	NA	FALSE	TRUE	FALSE	lanthipeptide	Lanthipeptide	Microcystis aeruginosa WLECC	ctg83_20	lanthipeptide-Microcystis aeruginosa WLECC	other	20	2	25
+FMDALA_07020	trigger factor	ctg83_21_lanthipeptide_21_0	NA	FALSE	TRUE	FALSE	lanthipeptide	Lanthipeptide	Microcystis aeruginosa WLECC	ctg83_21	lanthipeptide-Microcystis aeruginosa WLECC	other	21	2	25
+FMDALA_07015	aspartate-semialdehyde dehydrogenase	ctg83_22_lanthipeptide_21_0	NA	FALSE	TRUE	FALSE	lanthipeptide	Lanthipeptide	Microcystis aeruginosa WLECC	ctg83_22	lanthipeptide-Microcystis aeruginosa WLECC	additional	22	2	25
+FMDALA_07010	4-hydroxy-tetrahydrodipicolinate synthase	ctg83_23_lanthipeptide_21_0	NA	FALSE	TRUE	FALSE	lanthipeptide	Lanthipeptide	Microcystis aeruginosa WLECC	ctg83_23	lanthipeptide-Microcystis aeruginosa WLECC	other	23	2	25
+FMDALA_07005	ribonuclease J	ctg83_24_lanthipeptide_21_0	NA	FALSE	TRUE	FALSE	lanthipeptide	Lanthipeptide	Microcystis aeruginosa WLECC	ctg83_24	lanthipeptide-Microcystis aeruginosa WLECC	other	24	2	25
+FMDALA_07000	nickel pincer cofactor biosynthesis protein LarB	ctg83_25_lanthipeptide_21_0	NA	FALSE	TRUE	FALSE	lanthipeptide	Lanthipeptide	Microcystis aeruginosa WLECC	ctg83_25	lanthipeptide-Microcystis aeruginosa WLECC	other	25	2	25
+FMDALA_06995	1-deoxy-D-xylulose-5-phosphate synthase	ctg83_26_lanthipeptide_21_0	NA	FALSE	TRUE	FALSE	lanthipeptide	Lanthipeptide	Microcystis aeruginosa WLECC	ctg83_26	lanthipeptide-Microcystis aeruginosa WLECC	additional	26	2	25
+FMDALA_07050	glutathione peroxidase	ctg83_3_lanthipeptide_21_0	NA	FALSE	TRUE	FALSE	lanthipeptide	Lanthipeptide	Microcystis aeruginosa WLECC	ctg83_3	lanthipeptide-Microcystis aeruginosa WLECC	additional	3	2	25
+FMDALA_07045	undecaprenyl-diphosphate phosphatase	ctg83_4_lanthipeptide_21_0	NA	FALSE	TRUE	FALSE	lanthipeptide	Lanthipeptide	Microcystis aeruginosa WLECC	ctg83_4	lanthipeptide-Microcystis aeruginosa WLECC	other	4	2	25
+FMDALA_17140	HlyD family secretion protein	NA	ctg199_10	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_17145	oxidoreductase	NA	ctg199_11	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_17150	hypothetical protein	NA	ctg199_12	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_17155	hypothetical protein	NA	ctg199_13	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_17160	alpha/beta hydrolase	NA	ctg199_14	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_17165	hypothetical protein	NA	ctg199_15	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_17170	tryptophan halogenase	NA	ctg199_16	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_17175	tryptophan halogenase	NA	ctg199_17	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_17180	tryptophan halogenase	NA	ctg199_18	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_17185	hypothetical protein	NA	ctg199_19	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_17190	short-chain dehydrogenase	NA	ctg199_20	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_17195	Type I polyketide synthase	NA	ctg199_21	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_22455	hypothetical protein	NA	ctg207_1	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_22460	nitrogen fixation protein	NA	ctg207_2	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_22465	hypothetical protein	NA	ctg207_3	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_22470	Nif11 domain-containing protein	NA	ctg207_4	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_22475	hypothetical protein	NA	ctg207_5	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_22480	nif11-class peptide radical SAM maturase 3	NA	ctg207_6	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_22485	tryptophan synthase subunit alpha	NA	ctg207_7	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_22490	glycosyltransferase	NA	ctg207_8	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_22495	ABC transporter permease	NA	ctg207_9	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_10430	hypothetical protein	NA	ctg21_1	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_10475	type II toxin-antitoxin system mRNA interferase toxin, RelE/StbE family	NA	ctg21_10	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_10450	Putative restriction endonuclease	NA	ctg21_5	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_10460	Type II toxin-antitoxin system HicB family antitoxin	NA	ctg21_7	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_10465	hypothetical protein	NA	ctg21_8	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_10470	hypothetical protein	NA	ctg21_9	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_09775	hypothetical protein	NA	ctg223_10	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_09780	hypothetical protein	NA	ctg223_11	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_09785	PIN domain nuclease	NA	ctg223_12	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_09790	hypothetical protein	NA	ctg223_13	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_09795	Peptidase-S8 domain-containing protein	NA	ctg223_14	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_09800	Peptidase S8 and S53 subtilisin kexin sedolisin	NA	ctg223_15	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_09805	hypothetical protein	NA	ctg223_16	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_09810	hypothetical protein	NA	ctg223_17	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_09755	hypothetical protein	NA	ctg223_6	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03695	aspartate aminotransferase family protein	NA	ctg225_10	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03700	photosystem I reaction center subunit IV	NA	ctg225_11	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03705	hypothetical protein	NA	ctg225_12	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03710	16S rRNA (uracil(1498)-N(3))-methyltransferase	NA	ctg225_14	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03715	hypothetical protein	NA	ctg225_15	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03720	AAA-23 domain-containing protein	NA	ctg225_16	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03725	hypothetical protein	NA	ctg225_17	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03730	hypothetical protein	NA	ctg225_18	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03735	hypothetical protein	NA	ctg225_19	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03740	nitrogenase	NA	ctg225_20	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03675	SWIM-type domain-containing protein	NA	ctg225_5	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03680	type I DNA topoisomerase	NA	ctg225_6	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03685	SAM-dependent methyltransferase	NA	ctg225_8	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03690	sulfotransferase	NA	ctg225_9	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_10755	Peptide synthetase	NA	ctg266_1	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_10810	porin	NA	ctg266_12	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_10795	non-ribosomal peptide synthetase	NA	ctg266_9	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_15605	Glucosyl transferase GtrII	NA	ctg403_6	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_10050	glutamate-1-semialdehyde 2,1-aminomutase	NA	ctg409_1	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_10095	non-ribosomal peptide synthetase	NA	ctg409_10	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_10125	diguanylate cyclase	NA	ctg409_16	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_10055	DNA polymerase III subunit beta	NA	ctg409_2	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03395	DUF4351 domain-containing protein	NA	ctg426_1	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03440	squalene--hopene cyclase	NA	ctg426_10	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03445	translation elongation factor Ts	NA	ctg426_11	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03450	30S ribosomal protein S2	NA	ctg426_13	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03455	thioredoxin-dependent thiol peroxidase	NA	ctg426_14	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03460	Zn-dependent protease with chaperone function	NA	ctg426_15	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03465	CopY family transcriptional regulator	NA	ctg426_16	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03470	DUF4090 domain-containing protein	NA	ctg426_17	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03475	mannose-1-phosphate guanyltransferase	NA	ctg426_18	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03480	lipid-A-disaccharide synthase	NA	ctg426_19	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03400	aminotransferase	NA	ctg426_2	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03485	DNA primase	NA	ctg426_20	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03490	hypothetical protein	NA	ctg426_21	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03405	indole-3-glycerol phosphate synthase TrpC	NA	ctg426_3	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03410	hypothetical protein	NA	ctg426_4	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03415	Chromosome partition protein Smc	NA	ctg426_5	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03420	DUF3288 domain-containing protein	NA	ctg426_6	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03425	methionine synthase	NA	ctg426_7	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03430	glycosyltransferase	NA	ctg426_8	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_03435	transcriptional regulator	NA	ctg426_9	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_06540	Transposase	NA	ctg433_1	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_06585	hypothetical protein	NA	ctg433_10	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_06590	4-hydroxy-tetrahydrodipicolinate reductase	NA	ctg433_11	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_06595	signal peptidase	NA	ctg433_12	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_06555	hypothetical protein	NA	ctg433_4	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_06560	peptide deformylase	NA	ctg433_5	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_06565	hypothetical protein	NA	ctg433_6	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_06570	serine/threonine protein kinase	NA	ctg433_7	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_06575	farnesyl-diphosphate synthase	NA	ctg433_8	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_06580	acid phosphatase	NA	ctg433_9	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_00045	pilus motility taxis protein HmpF	NA	ctg451_1	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_00090	Circularly permuted ATP-grasp type 2	NA	ctg451_11	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_00095	A putative alpha-helical domain with a conserved ER motif	NA	ctg451_12	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_00100	transglutaminase	NA	ctg451_13	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_00105	hypothetical protein	NA	ctg451_14	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_00055	hypothetical protein	NA	ctg451_2	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_00060	phytoene/squalene synthase family protein	NA	ctg451_3	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_00065	Methyltransferase	NA	ctg451_5	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_00075	cytochrome b6-f complex subunit IV	NA	ctg451_6	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_06040	rubredoxin	NA	ctg73_10	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_06000	twin-arginine translocase subunit TatC	NA	ctg73_2	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_06005	hypothetical protein	NA	ctg73_3	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_06010	photosystem II chlorophyll-binding protein CP47	NA	ctg73_4	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_06015	photosystem II reaction center protein J	NA	ctg73_5	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_06020	photosystem II reaction center protein L	NA	ctg73_6	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_06025	cytochrome b559 subunit beta	NA	ctg73_7	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_06030	cytochrome b559 subunit alpha	NA	ctg73_8	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_06035	photosynthesis system II assembly factor Ycf48	NA	ctg73_9	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_20170	potassium-transporting ATPase subunit KdpA	NA	ctg88_10	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_20180	DNA (cytosine-5-)-methyltransferase	NA	ctg88_13	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_20185	K(+)-transporting ATPase subunit C	NA	ctg88_14	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_20190	DUF218 domain-containing protein	NA	ctg88_15	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_20195	DNA topoisomerase 4 subunit A	NA	ctg88_16	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_20200	Response regulatory domain-containing protein	NA	ctg88_17	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_20205	D-alanyl-D-alanine dipeptidase	NA	ctg88_18	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_20210	DNA phosphorothioation system sulfurtransferase DndC	NA	ctg88_19	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_20215	DNA-sulfur modification-associated	NA	ctg88_20	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_20220	acyl carrier protein	NA	ctg88_21	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_20225	SAM-dependent methyltransferase	NA	ctg88_22	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_20235	hypothetical protein	NA	ctg88_23	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_20240	non-ribosomal peptide synthetase	NA	ctg88_24	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_20160	hypothetical protein	NA	ctg88_8	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
+FMDALA_20165	hypothetical protein	NA	ctg88_9	TRUE	FALSE	FALSE	NA	NA	NA	NA	NA	NA	NA	NA	NA
