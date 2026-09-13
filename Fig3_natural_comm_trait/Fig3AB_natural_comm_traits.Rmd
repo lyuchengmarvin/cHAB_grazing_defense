@@ -1,0 +1,889 @@
+---
+title: "Fig3A defense traits and Microcystis clade composition"
+author: "Yu-Cheng Lin"
+date: "2026-03-06"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(ggrepel)
+library(ggpubr)
+library(tidyverse)
+library(vegan)
+```
+
+```{r}
+fp_2019raw <- read.csv("inputs/fp_data/AllFPData2019.csv", header = T)
+fp_2018raw <- read.csv("inputs/fp_data/AllFPData2018.csv", header = T)
+fp_data <- rbind(fp_2018raw,fp_2019raw) %>%
+  rename("blugrn" = Bluegreen,
+         "grn" = `Green.Algae`,
+         "diatom" = `Diatoms`,
+         "crypto" = `Cryptophyta`,
+         "yellow_sub" = `Yellow.substances`,
+         "total" = `Total.conc.`,
+         "date_time" = `Date.Time`,
+         "exp_id" = `ExperimentJD`) %>%
+  mutate(dd = lubridate::mdy_hm(date_time),
+         Treatment = case_when(
+           str_detect(Tank, "C") ~ "control",
+           str_detect(Tank, "Q") ~ "quagga",
+           .default = "other"
+         )) %>%
+  pivot_longer(cols = c(blugrn,grn,crypto,diatom,yellow_sub,total), 
+               names_to = 'category', values_to = 'chla')
+reading_summary <- fp_data %>%
+  group_by(Treatment, TimePoint, Tank, ExperimentDate,WaterLocation) %>%
+  summarise(n_readings = n_distinct(chla)) 
+  
+fp_summary <- fp_data %>%
+  group_by(Treatment, TimePoint, Tank,ExperimentDate, category, exp_id,WaterLocation) %>%
+  summarise(across(c(chla, dd), list(avg = mean), .names = "{.fn}_{.col}")) %>%
+  arrange(Treatment, Tank, ExperimentDate, exp_id, avg_dd) %>%
+  group_by(Treatment, Tank, ExperimentDate, exp_id,category) %>%
+  mutate(
+    interval_mins = as.numeric(difftime(avg_dd, lag(avg_dd), units = "mins")),
+    # Calculate total elapsed time from T0 for that group
+    total_elapsed_hrs = as.numeric(difftime(avg_dd, min(avg_dd), units = "hours"))
+  ) %>%
+  ungroup() %>%
+  ## Add volumes
+  # In both 2018 and 2019, all tank started with 14L of screened water. 25ml were taken out at each time point for fp and flowcam readings
+  group_by(Treatment, Tank, ExperimentDate, exp_id, category,WaterLocation) %>%
+  mutate(
+    reading_number = row_number(),
+    V = 14000,
+    VFWC = reading_number * 25
+  ) %>%
+  mutate(
+    VFM = V - VFWC
+  ) %>%
+  ungroup()
+```
+
+
+```{r}
+# Get phytoplankton readings from the control beakers at T0
+## Note yellow substances are not phytoplanktons. It is just a parameter to correct for the water color.
+control_T0 <- fp_summary %>%
+  filter(Treatment == "control", TimePoint == "0") %>%
+  mutate(lake = case_when(
+    str_detect(WaterLocation, "WE") ~ "LE",
+    str_detect(WaterLocation, "SB") ~ "LH",
+    .default = NA_character_
+  )) %>%
+  select(Tank, ExperimentDate, lake, category, avg_chla) %>%
+  pivot_wider(names_from = category, values_from = avg_chla) %>%
+  # get relative abundanace
+  mutate(sum = blugrn + grn + diatom + crypto,
+         blugrn_rel = blugrn / sum*100,
+         grn_rel = grn / sum*100,
+         diatom_rel = diatom / sum*100,
+         crypto_rel = crypto / sum*100)
+phyto_rel <- control_T0 %>%
+  select(Tank, ExperimentDate, lake, blugrn_rel, grn_rel, diatom_rel, crypto_rel) %>%
+  pivot_longer(cols = c(blugrn_rel, grn_rel, diatom_rel, crypto_rel), names_to = "category", values_to = "rel_abund") %>%
+  mutate(category_clean = case_when(
+    category == "blugrn_rel" ~ "Bluegreen (Cyanobacteria)",
+    category == "grn_rel" ~ "Green algae",
+    category == "diatom_rel" ~ "Diatoms",
+    category == "crypto_rel" ~ "Cryptophyta"
+  ))%>%
+  separate(ExperimentDate, into = c("Month", "Day", "Year"),remove = F, sep = "/") %>%
+  separate(Year, into = c("Year", "Column"),remove = F, sep = " ") %>%
+  mutate(Year = case_when(
+    Year == '2018' ~ '18',
+    Year == '2019' ~ '19',
+    TRUE ~ Year)) %>%
+  mutate(Column = case_when(
+    is.na(Column) ~ "Whole",
+    TRUE ~ Column
+  )) %>%
+  mutate(Date = paste(Year, paste0(0,Month), Day, sep = "_")) %>%
+  mutate(Date = gsub('18_010_4',"18_10_4", Date)) %>%
+  mutate(Timepoint = paste(Month, Day, sep = "/")) %>%
+  mutate(Month = case_when(
+    Month == '10' ~ '10',
+    TRUE ~ paste0(0, Month)
+  )) %>%
+  mutate(Year = case_when(
+    Year %in% c('18','19') ~ paste0("20", Year),
+    TRUE ~ Year)) %>%
+  mutate(lake = case_when(
+    lake == "LE" ~ "Lake Erie",
+    lake == "LH" ~ "Lake Huron",
+    TRUE ~ NA_character_
+  )) %>%
+  mutate(`Lake System` = paste0(Year,' ', lake))
+
+# Plot relative abundance of phytoplankton groups for each experiment in the control group
+ggplot(phyto_rel %>%
+         mutate(year_month_date = paste(Year, Month, Date, sep = " ")), aes(x = Tank, y = rel_abund, fill = category_clean)) +
+  geom_bar(stat = "identity", position = "stack") +
+  scale_fill_manual(values = c("Bluegreen (Cyanobacteria)" = "#1b9e77", "Green algae" = "#66a61e", 
+                               "Diatoms" = "#d95f02", "Cryptophyta" = "#e7298a")) +
+  facet_wrap(~year_month_date, scales = "free") +
+  labs(title = "Relative Abundance of Phytoplankton Groups in Control Beakers at T0",
+       x = "Technical replicates",
+       y = "Relative abundance (%)",
+       fill = "Phytoplankton Group") +
+  theme_pubclean()+
+    theme(plot.title= element_text(size=15,color='black',hjust=0.39,face = "bold"),
+          axis.line = element_line(linewidth=0, colour = "black"),
+          axis.ticks = element_line(size=1, colour = "black"),
+          axis.text.y = element_text(hjust = 0,size=10,color='black',face = "bold"),
+          axis.text.x = element_text(hjust = 1,vjust = 1,size=12,color='black',face = "bold", angle = 30),
+          axis.title = element_text(size=15,color='black',face = "bold"),
+          panel.background = element_blank(),
+          panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+          strip.background = element_rect(fill = "grey100", color = NULL, linewidth = 1.5),
+          strip.text.x.top = element_text(size=10,color='black',face = "bold"),
+          legend.title = element_text(size=10,color='black',hjust=0.5, face = "bold"),
+          legend.text = element_text(size = 10),
+          legend.box = "vertical",
+          legend.position = "right",
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank())
+ggsave("figures/fig3A/supplFig_phyto_rel_abund_control.png", width = 10, height = 10, dpi = 300)
+```
+
+```{r}
+#Calculations for control data to get final mixed measurements to correct for settling and death in mussel grazer experiments 
+control_summary_data <- fp_summary %>%
+  filter(Treatment == "control") %>%
+  select(-Treatment) %>%
+  group_by(Tank, ExperimentDate, category, exp_id,WaterLocation) %>%
+  summarise(control_elapsed_hour = max(total_elapsed_hrs),
+         C0 = avg_chla[TimePoint == "0"],
+         #Final control measurement after mixing
+         CFM = avg_chla[TimePoint == "FM"]) %>%
+  group_by(ExperimentDate, category, exp_id) %>%
+  # get summarized data for growth rate correction in the quagga data
+  summarise(avg_control_elapsed_hour=mean(control_elapsed_hour),
+            avg_C0 = mean(C0),
+            avg_CFM = mean(CFM))
+  
+  
+#Calculations for experimental data to get final mixed measurements
+exp_data <- fp_summary %>%
+  filter(Treatment == "quagga") %>%
+  select(-Treatment) %>%
+  group_by(Tank, ExperimentDate, category, exp_id, V,WaterLocation) %>%
+  summarise(
+    quagga_elapsed_hour = max(total_elapsed_hrs),
+         quagga_VFMx = min(VFM),
+         Z0 = avg_chla[TimePoint == "0"],
+         #Final control measurement after mixing
+         ZFM = avg_chla[TimePoint == "FM"])
+
+#Combine both data
+final_data <- exp_data %>%
+  left_join(control_summary_data, by = c("ExperimentDate", "category", "exp_id"))
+# Calculate feeding rates
+feeding_rates <- final_data %>%
+  mutate(
+    # No body size or ash-free dry weight were recorded. 
+    # This calculation will assume uniform body weight across experiments
+    # There were 20 mussels in each tank
+    FI = (V/(quagga_elapsed_hour*20)) * (log(Z0)-log(ZFM)-log(avg_C0)+log(avg_CFM))
+  )%>%
+  ungroup() %>%
+  filter(!is.infinite(FI)) %>%
+  separate(ExperimentDate, into = c("Month", "Day", "Year"), sep = "/", remove = FALSE) %>%
+  mutate(Year = case_when(
+    Year %in% c('18','19') ~ paste0("20", Year),
+    TRUE ~ Year))
+write.csv(feeding_rates, "inputs/fp_data/All_feeding_rates.csv", row.names = FALSE, quote = FALSE)
+```
+
+```{r}
+# Plot 1: All categories faceted by category
+ggplot(feeding_rates, aes(x = ExperimentDate, y = FI, fill = category)) +
+  geom_boxplot() +
+  facet_wrap(~category) +
+  theme_minimal() +
+  labs(title = "Clearance Rates by Category Across Experiment Dates",
+       x = "Experiment Date",
+       y = "Clearance Rates on Amount Ingested ()") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Plot 2: All categories overlaid with colors
+ggplot(feeding_rates, aes(x = ExperimentDate, y = FI, fill = category, color = category)) +
+  geom_boxplot(alpha = 0.6) +
+  facet_wrap(~category) +
+  theme_minimal() +
+  labs(title = "Feeding Rates (FI) by Category Across Experiment Dates",
+       x = "Experiment Date",
+       y = "Feeding Index (FI)",
+       fill = "Category",
+       color = "Category") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Plot 3: Line plot showing mean FI per category per date
+feeding_summary_plot <- feeding_rates %>%
+  group_by(ExperimentDate, category,Year,WaterLocation) %>%
+  summarise(mean_FI = mean(FI, na.rm = TRUE),
+            se_FI = sd(FI, na.rm = TRUE) / sqrt(n())) %>%
+  ungroup()
+
+ggplot(feeding_summary_plot, aes(x = ExperimentDate, y = mean_FI, color = category, group = category)) +
+  geom_line() +
+  geom_point() +
+  geom_errorbar(aes(ymin = mean_FI - se_FI, ymax = mean_FI + se_FI), width = 0.2) +
+  facet_wrap(~Year, scales = "free_x") +
+  theme_minimal()+
+  labs(title = "Mean Feeding Rates (FI) by Category Across Experiment Dates",
+       x = "Experiment Date",
+       y = "Mean Feeding Index (FI)",
+       color = "Category") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+Fetch data that match metagenomic samples
+
+```{r}
+metaG <- c('6/12/19','8/22/19','7/18/19','7/31/19','8/13/2019 Diluted', '8/13/2019 Whole', '9/18/19','6/28/18','7/10/18','7/25/18','8/15/18','10/4/18')
+
+metaG_fp <- feeding_rates %>%
+  filter(ExperimentDate %in% metaG) %>%
+  mutate(
+    lake = case_when(
+      WaterLocation == "WE4" ~ "LE",
+      WaterLocation == "SB15" ~ "LH",
+      TRUE ~ NA_character_
+    ) 
+  ) %>%
+  select(Tank, ExperimentDate, category, FI, lake) %>%
+  mutate(FI = if_else(is.nan(FI), 0, FI)) %>%
+  pivot_wider(names_from = category, values_from = FI,values_fill = 0)
+
+## Identify outliers with Dixon's Q test for feeding rate (FI) within each experiment date
+FI_data <- metaG_fp[1:9]
+
+q_FI_data <- FI_data %>%
+  group_by(ExperimentDate) %>%
+  summarise(
+    Q_range = max(total) - min(total),
+    Q_gap = max(total) - sort(total)[2],
+    Q_statistic = Q_gap / Q_range,
+    Q_critical = case_when(
+      n() == 4 ~ 0.765, # Dixon's Q critical value for n=4 at 95% confidence level
+      TRUE ~ NA_real_), 
+    # Determine if the largest value in that experiment is an outlier based on Dixon's Q test
+    has_outlier = ifelse(Q_statistic > Q_critical, TRUE, FALSE)
+)
+
+
+boxplot(FI_data$total~FI_data$ExperimentDate, main = "Boxplot of Feeding Rate on Total phytoplanktons", ylab = "Experiment")
+```
+
+```{r}
+## Remove the outliers flaged by Dixon's Q test from the metaG_fp dataset
+
+metaG_fp_clean <- metaG_fp %>%
+  left_join(q_FI_data %>% select(ExperimentDate, has_outlier), by = "ExperimentDate") %>%
+  group_by(ExperimentDate) %>%
+  mutate(is_outlier = ifelse(has_outlier & total == max(total), TRUE, FALSE)) %>%
+  ungroup() %>%
+  filter(!is_outlier) %>%
+  select(-has_outlier, -is_outlier)
+write.csv(metaG_fp_clean, "inputs/fp_data/ND_metaG_samples_fp.csv", row.names = FALSE, quote = FALSE)
+```
+
+Plot raw data
+
+
+```{r}
+metaG_fp_clean <- read.csv("inputs/fp_data/ND_metaG_samples_fp.csv", header = TRUE)
+metaG_FI <- metaG_fp_clean %>%
+  select(1:9) %>%
+  pivot_longer(cols = c(blugrn, grn, diatom, crypto,total), names_to = "category", values_to = "FI") %>%
+  mutate(year_month_date = case_when(
+    ExperimentDate == "6/12/19" ~ "2019_06_12",
+    ExperimentDate == "7/18/19" ~ "2019_07_18",
+    ExperimentDate == "7/31/19" ~ "2019_07_31",
+    ExperimentDate == "8/13/2019 Diluted" ~ "2019_08_13_Diluted",
+    ExperimentDate == "8/13/2019 Whole" ~ "2019_08_13_Whole",
+    ExperimentDate == "8/22/19" ~ "2019_08_22",
+    ExperimentDate == "9/18/19" ~ "2019_09_18",
+    ExperimentDate == "6/28/18" ~ "2018_06_28",
+    ExperimentDate == "7/10/18" ~ "2018_07_10",
+    ExperimentDate == "7/25/18" ~ "2018_07_25",
+    ExperimentDate == "8/15/18" ~ "2018_08_15",
+    ExperimentDate == "10/4/18" ~ "2018_10_04"
+  )) %>%
+  separate(year_month_date, into = c("year", "month", "date"),remove = F, sep = "_") %>%
+  mutate(lake_year = paste0(lake, " ", year)) %>%
+  mutate(month_date = paste0(month, "_", date)) %>%
+  mutate(category_clean = case_when(
+    category == "blugrn" ~ "Bluegreen (Cyanobacteria)",
+    category == "grn" ~ "Green algae",
+    category == "diatom" ~ "Diatoms",
+    category == "crypto" ~ "Cryptophyta",
+    category == "total" ~ "Total phytoplanktons"
+  ))
+  
+# plot 2018 Lake Erie samples
+ggplot(metaG_FI %>% filter(lake_year == 'LE 2018'), aes(x = FI, y = category_clean, fill = category)) +
+  geom_boxplot(alpha = 0.6) +
+  labs(title = "Feeding rates by algal group across lake samples",
+       x = "Clearance Rate on Amount Ingested \n(mL/hr per mussel)",
+       y = NULL,
+       fill = "Algal group") +
+  scale_fill_manual(values = c("blugrn" = "#1b9e77", "grn" = "#66a61e", 
+                               "diatom" = "#d95f02", "crypto" = "#e7298a", "total" = "#7570b3")) +
+  facet_grid(rows = vars(lake_year), cols = vars(month_date), scales = "free_y") +
+  theme_pubclean()+
+  theme(plot.title= element_text(size=15,color='black',hjust=0.39,face = "bold"),
+        axis.line = element_line(linewidth=0, colour = "black"),
+          axis.ticks = element_line(linewidth=1, colour = "black"),
+          axis.text.y = element_text(hjust = 0,size=12,color='black',face = "bold"),
+          axis.text.x = element_text(hjust = 0.5,size=12,color='black',face = "bold", angle = 90),
+          axis.title = element_text(size=12,color='black',face = "bold"),
+          #panel.background = element_rect(fill = "snow"),
+          panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+          legend.title = element_text(size=10,color='black',hjust=0.5, face = "bold"),
+          legend.position = 'right',
+          panel.grid.major = element_blank())
+ggsave("figures/fig3A/supplFig_2018_LE_FI_algal_group.png", width = 10, height = 4, dpi = 300)
+
+# plot 2019 Lake Erie samples
+ggplot(metaG_FI %>% filter(lake_year == 'LE 2019'), aes(x = FI, y = category_clean, fill = category)) +
+  geom_boxplot(alpha = 0.6) +
+  labs(title = "Feeding rates by algal group across lake samples",
+       x = "Clearance Rate on Amount Ingested \n(mL/hr per mussel)",
+       y = NULL,
+       fill = "Algal group") +
+  scale_fill_manual(values = c("blugrn" = "#1b9e77", "grn" = "#66a61e", 
+                               "diatom" = "#d95f02", "crypto" = "#e7298a", "total" = "#7570b3")) +
+  facet_grid(rows = vars(lake_year), cols = vars(month_date), scales = "free_y") +
+  theme_pubclean()+
+  theme(plot.title= element_text(size=15,color='black',hjust=0.39,face = "bold"),
+        axis.line = element_line(linewidth=0, colour = "black"),
+          axis.ticks = element_line(linewidth=1, colour = "black"),
+          axis.text.y = element_text(hjust = 0,size=12,color='black',face = "bold"),
+          axis.text.x = element_text(hjust = 0.5,size=12,color='black',face = "bold", angle = 90),
+          axis.title = element_text(size=12,color='black',face = "bold"),
+          #panel.background = element_rect(fill = "snow"),
+          panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+          legend.title = element_text(size=10,color='black',hjust=0.5, face = "bold"),
+          legend.position = 'right',
+          panel.grid.major = element_blank())
+ggsave("figures/fig3A/supplFig_2019_LE_FI_algal_group.png", width = 10, height = 4, dpi = 300)
+
+# plot 2019 Lake Huron samples
+ggplot(metaG_FI %>% filter(lake_year == 'LH 2019'), aes(x = FI, y = category_clean, fill = category)) +
+  geom_boxplot(alpha = 0.6) +
+  labs(title = "Feeding rates by algal group across lake samples",
+       x = "Clearance Rate on Amount Ingested \n(mL/hr per mussel)",
+       y = NULL,
+       fill = "Algal group") +
+  scale_fill_manual(values = c("blugrn" = "#1b9e77", "grn" = "#66a61e", 
+                               "diatom" = "#d95f02", "crypto" = "#e7298a", 
+                               "yellow_sub" = "yellow", "total" = "#7570b3")) +
+  facet_grid(rows = vars(lake_year), cols = vars(month_date), scales = "free_y") +
+  theme_pubclean()+
+  theme(plot.title= element_text(size=15,color='black',hjust=0.39,face = "bold"),
+        axis.line = element_line(linewidth=0, colour = "black"),
+          axis.ticks = element_line(linewidth=1, colour = "black"),
+          axis.text.y = element_text(hjust = 0,size=12,color='black',face = "bold"),
+          axis.text.x = element_text(hjust = 0.5,size=12,color='black',face = "bold", angle = 90),
+          axis.title = element_text(size=12,color='black',face = "bold"),
+          #panel.background = element_rect(fill = "snow"),
+          panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+          legend.title = element_text(size=10,color='black',hjust=0.5, face = "bold"),
+          legend.position = 'right',
+          panel.grid.major = element_blank())
+ggsave("figures/fig3A/supplFig_2019_LH_FI_algal_group.png", width = 10, height = 4, dpi = 300)
+```
+
+Calculate selectivity for bluegreen algae (cyanobacteria)
+
+Mussel's selectivity for cyanobacteria is calculated by dividing the bluegreen algae feeding rate (FI)  to the total feeding rate. There is negative feeding rate for bluegreen algae in many samples potentially due to the resistance to feeding and facilitated growth after the removal of other organisms. Because negative selectivity will complicate our interpretation, we adjusted the FI values for all food categories in that treatment by adding the absolute value of the most negative bluegreen FI in that treatment. To avoid 0 values, we added a pseudo-count (10^-7) to all values. This adjustment ensures that all selectivity values are positive but retained the order between treatments.
+
+```{r}
+metaG_fp_downstream <- metaG_fp_clean %>%
+  # if bluegreen FI is negative in that treatment, move everything up by adding the absolute value of the most negative bluegreen FI in that treatment
+  group_by(ExperimentDate, Tank) %>%
+  mutate(blugrn_prime = if_else(blugrn < 0, blugrn + abs(min(blugrn)) + 0.0000001, blugrn),
+         grn_prime = if_else(blugrn < 0, grn + abs(min(blugrn)) + 0.0000001, grn),
+         diatom_prime = if_else(blugrn < 0, diatom + abs(min(blugrn)) + 0.0000001, diatom),
+         crypto_prime = if_else(blugrn < 0, crypto + abs(min(blugrn)) + 0.0000001, crypto),
+         total_prime = if_else(blugrn < 0, total + abs(min(blugrn)) + 0.0000001, total)) %>%
+  ungroup() %>%
+  # FI on diatom and yellow substances are prone to inflation because of very low abundance.
+  # selectivity is calculated here as the ratio between bluegreen and total chlorophyll-a instead of bluegreen versus all other food because the latter can be easily inflated by low FI on other food categories.
+  mutate(selectivity_blugrn = blugrn_prime / (total_prime))
+
+```
+
+
+
+```{r}
+# Plot feeding index for total chlorophyll-a and selectivity for bluegreens across samples
+comm_traits <- metaG_fp_downstream %>%
+  select(Tank, ExperimentDate, lake, total, selectivity_blugrn) %>%
+  separate(ExperimentDate, into = c("Date", "Column"), sep = " ") %>%
+  mutate(Column = case_when(
+           is.na(Column) ~ "Whole",
+           TRUE ~ Column
+         )) %>%
+  filter(Column == "Whole") %>%
+  separate(Date, into = c("Month", "Day", "Year"), sep = "/") %>%
+  mutate(Tank = gsub("Q","R", Tank)) %>%
+  mutate(Year = gsub('2019',"19", Year)) %>%
+  mutate(lake = case_when(
+    lake == "LE" ~ "Lake Erie",
+    lake == "LH" ~ "Lake Huron",
+    TRUE ~ NA_character_
+  )) %>%
+  mutate(`Lake System` = paste0('20',Year,' ', lake)) %>%
+  mutate(Date = paste(Year, paste0(0,Month), Day, sep = "_")) %>%
+  mutate(Date = gsub('18_010_4',"18_10_4", Date)) %>%
+  mutate(Timepoint = paste(Month, Day, sep = "/")) %>%
+  mutate(Month = case_when(
+    Month == '10' ~ '10',
+    TRUE ~ paste0(0, Month)
+  )) 
+
+mean_comm_traits <- comm_traits %>%
+  select(Date, total, selectivity_blugrn, Month, Timepoint, `Lake System`) %>%
+  group_by(Date, Month, Timepoint, `Lake System`) %>%
+  summarise(`Mussel Total Feeding Rate` = mean(total),
+            mtfr_se = sd(total) / sqrt(n()),
+            `Mussel Selectivity` = mean(selectivity_blugrn),
+            select_se = sd(selectivity_blugrn) / sqrt(n())) %>%
+  ungroup()
+
+ggplot(mean_comm_traits, aes(x = `Mussel Selectivity`, y = `Mussel Total Feeding Rate`)) +
+  geom_point(aes(fill = `Lake System`, shape = Month),size = 4) +
+  scale_fill_manual(name = "Lake System", 
+                    values = c("2018 Lake Erie" = "peachpuff2", 
+                               "2019 Lake Erie" = "cyan4", 
+                               "2019 Lake Huron" = "lightpink4")) +
+  scale_shape_manual(name = "Month", 
+                     values = c("06" = 21, "07" = 22, 
+                                "08" = 23,"09" = 24, "10" = 25))+
+  guides(fill = guide_legend(override.aes = list(shape = 21)),
+         alpha = "none",
+         shape = guide_legend(override.aes = list(fill = "grey80"))) +
+  geom_errorbar(aes(ymin = `Mussel Total Feeding Rate` - mtfr_se, ymax = `Mussel Total Feeding Rate` + mtfr_se), 
+                width = 0.02, color = "grey30", lineend = "butt") +
+  geom_errorbar(aes(xmin = `Mussel Selectivity` - select_se, xmax = `Mussel Selectivity` + select_se), 
+                height = 0.02, color = "grey30", lineend = "butt") +
+  labs(title = "Community Defense Traits",
+       x = "Mussel selectivity for Cyanobacteria (Bluegreens : Total Chlorophyll-a)",
+       y = "Total volume of phytoplanktons ingested per mussel per hour") +
+  ggrepel::geom_text_repel(aes(label = Timepoint), size = 3, color = "black", fontface = "bold") +
+  theme_pubclean()+
+  theme(plot.title= element_text(size=15,color='black',hjust=0.39,face = "bold"),
+        axis.line = element_line(size=0, colour = "black"),
+          axis.ticks = element_line(size=1, colour = "black"),
+          axis.text.y = element_text(hjust = 0,size=16,color='black',face = "bold"),
+          axis.text.x = element_text(hjust = 0.5,size = 16,color='black',face = "bold", angle = 90),
+          axis.title = element_text(size=12,color='black',face = "bold"),
+          panel.background = element_blank(),
+          panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+          legend.title = element_text(size=10,color='black',hjust=0.5, face = "bold"),
+          legend.position = 'right',
+          panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+ggsave("figures/fig3A/ND2019_metaG_samples_community_defense_traits.png", width = 6, height = 4.5, dpi = 300)
+```
+
+Relationship of traits with cyanobacterial relative abundance.
+
+```{r}
+metaG_phyto_rel <- phyto_rel %>%
+  filter(ExperimentDate %in% metaG) %>%
+  filter(Column == "Whole") %>%
+  group_by(Date, Timepoint, category_clean) %>%
+  summarise(avg_rel_abund = mean(rel_abund),
+            se_rel_abund = sd(rel_abund) / sqrt(n())) 
+  
+comm_trait_rel_abund <- mean_comm_traits %>%
+  left_join(metaG_phyto_rel %>% 
+              filter(category_clean == "Bluegreen (Cyanobacteria)") %>% 
+              select(Date, Timepoint, avg_rel_abund, se_rel_abund), by = c("Date","Timepoint")) %>%
+  rename(`Cyanobacteria abundance (%)` = avg_rel_abund,
+         cyanrelabund_se = se_rel_abund) 
+
+# plot trait data with cyanobacterial relative abundance
+## Inhibition
+ggplot(comm_trait_rel_abund, aes(x = `Cyanobacteria abundance (%)`, y = `Mussel Total Feeding Rate`)) +
+  geom_point(aes(fill = `Lake System`, shape = Month),size = 3) +
+  geom_errorbar(aes(xmin = `Cyanobacteria abundance (%)` - cyanrelabund_se, 
+                    xmax = `Cyanobacteria abundance (%)` + cyanrelabund_se), 
+                height = 0.02, color = "grey30", lineend = "butt") +
+  geom_errorbar(aes(ymin = `Mussel Total Feeding Rate` - mtfr_se, 
+                    ymax = `Mussel Total Feeding Rate` + mtfr_se), 
+                width = 0.02, color = "grey30", lineend = "butt") +
+  scale_fill_manual(name = "Lake System", 
+                    values = c("2018 Lake Erie" = "peachpuff2", 
+                               "2019 Lake Erie" = "cyan4", 
+                               "2019 Lake Huron" = "lightpink4")) +
+  scale_shape_manual(name = "Month", 
+                     values = c("06" = 21, "07" = 22, 
+                                "08" = 23,"09" = 24, "10" = 25))+
+  guides(fill = guide_legend(override.aes = list(shape = 21)),
+         alpha = "none",
+         shape = guide_legend(override.aes = list(fill = "grey80"))) +
+  labs(title = NULL,
+       x = "Cyanobacteria abundance (%)",
+       y = "Total volume of phytoplanktons \n ingested per mussel per hour") +
+  ggrepel::geom_text_repel(aes(label = Timepoint), size = 3, color = "black", fontface = "bold") +
+  theme_pubclean()+
+    theme(plot.title= element_text(size=15,color='black',hjust=0.39,face = "bold"),
+          axis.line = element_line(linewidth=0, colour = "black"),
+          axis.ticks = element_line(size=1, colour = "black"),
+          axis.text.y = element_text(hjust = 0,size=10,color='black',face = "bold"),
+          axis.text.x = element_text(hjust = 1,vjust = 1,size=12,color='black',face = "bold", angle = 30),
+          axis.title = element_text(size=15,color='black',face = "bold"),
+          panel.background = element_blank(),
+          panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+          strip.background = element_rect(fill = "grey100", color = NULL, linewidth = 1.5),
+          strip.text.x.top = element_text(size=10,color='black',face = "bold"),
+          legend.title = element_text(size=10,color='black',hjust=0.5, face = "bold"),
+          legend.text = element_text(size = 10),
+          legend.box = "vertical",
+          legend.position = "right",
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank())
+ggsave("figures/fig3A/comm_inhib_cyano_rel.png", width = 6, height = 4.5, dpi = 300)
+```
+
+```{r}
+#Inhibition_model <- lm(`Mussel Total Feeding Rate` ~ `Cyanobacteria abundance (%)`, data = comm_trait_rel_abund)
+#summary(Inhibition_model)
+
+#comm_trait_rel_abund$inhib_res <- Inhibition_model$residuals
+#plot(Inhibition_model$residuals)
+```
+
+```{r}
+## unpalatability
+ggplot(comm_trait_rel_abund, aes(x = `Cyanobacteria abundance (%)`, y = `Mussel Selectivity`)) +
+  geom_point(aes(fill = `Lake System`, shape = Month),size = 3) +
+  geom_errorbar(aes(xmin = `Cyanobacteria abundance (%)` - cyanrelabund_se, 
+                    xmax = `Cyanobacteria abundance (%)` + cyanrelabund_se), 
+                height = 0.02, color = "grey30", lineend = "butt") +
+  geom_errorbar(aes(ymin = `Mussel Selectivity` - select_se, 
+                    ymax = `Mussel Selectivity` + select_se), 
+                width = 0.02, color = "grey30", lineend = "butt") +
+  scale_fill_manual(name = "Lake System", 
+                    values = c("2018 Lake Erie" = "peachpuff2", 
+                               "2019 Lake Erie" = "cyan4", 
+                               "2019 Lake Huron" = "lightpink4")) +
+  scale_shape_manual(name = "Month", 
+                     values = c("06" = 21, "07" = 22, 
+                                "08" = 23,"09" = 24, "10" = 25))+
+  guides(fill = guide_legend(override.aes = list(shape = 21)),
+         alpha = "none",
+         shape = guide_legend(override.aes = list(fill = "grey80"))) +
+  labs(title = NULL,
+       x = "Cyanobacteria abundance (%)",
+       y = "Mussel selectivity for Cyanobacteria \n (Bluegreens : Total Chlorophyll-a)") +
+  ggrepel::geom_text_repel(aes(label = Timepoint), size = 3, color = "black", fontface = "bold") +
+  theme_pubclean()+
+    theme(plot.title= element_text(size=15,color='black',hjust=0.39,face = "bold"),
+          axis.line = element_line(linewidth=0, colour = "black"),
+          axis.ticks = element_line(size=1, colour = "black"),
+          axis.text.y = element_text(hjust = 0,size=10,color='black',face = "bold"),
+          axis.text.x = element_text(hjust = 1,vjust = 1,size=12,color='black',face = "bold", angle = 30),
+          axis.title = element_text(size=15,color='black',face = "bold"),
+          panel.background = element_blank(),
+          panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+          strip.background = element_rect(fill = "grey100", color = NULL, linewidth = 1.5),
+          strip.text.x.top = element_text(size=10,color='black',face = "bold"),
+          legend.title = element_text(size=10,color='black',hjust=0.5, face = "bold"),
+          legend.text = element_text(size = 10),
+          legend.box = "vertical",
+          legend.position = "right",
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank())
+ggsave("figures/fig3A/comm_unpalat_cyano_rel.png", width = 6, height = 4.5, dpi = 300)
+```
+
+# Microcystis clades to feeding rates
+
+The relationship between Microcystis clades and feeding selectivity or clearance rate on total chlorophyll-a concentration
+
+```{r}
+## Microcystis clade abundance data quantified by mapping metaG reads to the lgt_516 marker gene 
+mcy_clade_comp <- read.csv('inputs/clade_lgt_abundance.csv', header = TRUE) %>%
+  mutate(sample_name = paste0(20,sample_name)) %>%
+  select(-sum_TPM) %>%
+  pivot_wider(names_from = Clade, values_from = sum_TPM_rel_abund) %>%
+  mutate(UNKNOWN = Un+Unknown) %>% 
+  select(-Un, -Unknown) %>%
+  filter(Treatment == "control") %>%
+  # remove diluted samples
+  filter(!SampleID %in% c("ND-51", "ND-52")) %>%
+  mutate(sample_name = gsub('2018',"18", sample_name)) %>%
+  mutate(sample_name = gsub('2019',"19", sample_name)) 
+
+# check if clade abundance sum up to 100
+check_clade_sum <- mcy_clade_comp %>%
+  select(9:ncol(mcy_clade_comp)) %>%
+  rowwise() %>%
+  mutate(total_clade_abundance = sum(c_across(everything()))) %>%
+  ungroup() %>%
+  pull(total_clade_abundance)
+
+check_clade_sum
+```
+
+PCA analysis of Microcystis clade composition and its relationship with feeding rates
+
+```{r}
+# Summarize trait data and clade composition data
+mean_clade_comp <- mcy_clade_comp %>%
+  select(Date, 9:ncol(mcy_clade_comp)) %>%
+  group_by(Date) %>%
+  summarise(across(everything(), mean)) %>%
+  ungroup()
+
+# Combine the summarized trait data and clade composition data
+trait_clade_table <- comm_trait_rel_abund %>%
+  select(Date, Month, Timepoint, `Lake System`, `Mussel Total Feeding Rate`,`Mussel Selectivity`) %>%
+  left_join(mean_clade_comp, by = "Date") %>%
+  # Since higher feeding rate and selectivity indicate stronger defense, I will use negative values of these two traits to represent community defense level in the PCA analysis.
+  mutate(Inhibition = -`Mussel Total Feeding Rate`,
+         Unpalatability = -`Mussel Selectivity`)
+
+# Perform PCA on Microcystis clade composition and traits
+pca_result<- prcomp(trait_clade_table %>%
+                      column_to_rownames(var = "Date") %>%
+                      select(-Month, -Timepoint, -`Lake System`,-`Mussel Total Feeding Rate`, -`Mussel Selectivity`), scale. = TRUE)
+
+## Extract PCA scores and combine with FI data
+pca_scores <- as.data.frame(pca_result$x) %>%
+  rownames_to_column(var = "Date") %>%
+  left_join(trait_clade_table, by = "Date") 
+
+## Extract loadings
+pca_loadings <- as.data.frame(pca_result$rotation) %>%
+  rownames_to_column(var = "Clade") %>%
+  mutate(seg_color  = case_when(
+    Clade %in% c("Inhibition","Unpalatability","Inhibition_res") ~ "Community defense traits",
+    Clade %in% c("Mae1", "Mae3_1","Mae3_3","Mae4","Mae5","Mae8","Mfl_ae1","Mfl_ae3") ~ "Laboratory-tested clades",
+    TRUE ~ "Untested clades"
+  ))
+
+## Eigenvalues for variance explained
+eigenvalues <- pca_result$sdev^2
+variance_explained <- eigenvalues / sum(eigenvalues) *100
+
+# Plot PCA biplot
+ggplot(pca_scores, aes(x = PC1, y = PC2)) +
+  geom_point(aes(fill = `Lake System`, shape = Month),size = 4) +
+  scale_fill_manual(name = "Lake System", 
+                    values = c("2018 Lake Erie" = "peachpuff2", 
+                               "2019 Lake Erie" = "cyan4", 
+                               "2019 Lake Huron" = "lightpink4")) +
+  scale_shape_manual(name = "Month", 
+                     values = c("06" = 21, "07" = 22, 
+                                "08" = 23,"09" = 24, "10" = 25))+
+  guides(fill = guide_legend(override.aes = list(shape = 21)),
+         alpha = "none",
+         shape = guide_legend(override.aes = list(fill = "grey80"))) +
+  geom_segment(data = pca_loadings %>%
+                 filter(seg_color %in% c('Laboratory-tested clades','Untested clades')), aes(x = 0, y = 0, 
+                                        xend = PC1*6, 
+                                        yend = PC2*6,
+                                        color = seg_color),
+                                        alpha = 0.8,
+                                        linewidth = 1.2, 
+               arrow = arrow(length = unit(0.1, "cm"))) +
+  geom_segment(data = pca_loadings%>%
+                 filter(seg_color %in% c('Community defense traits')), aes(x = 0, y = 0, 
+                                        xend = PC1*6, 
+                                        yend = PC2*6,
+                                        color = seg_color),
+                                        alpha = 0.8,
+                                        linewidth = 1.2, 
+               arrow = arrow(length = unit(0.1, "cm"))) +
+  geom_text_repel(data = pca_loadings, 
+                  aes(x = PC1*6, y = PC2*6, label = Clade), size = 3, 
+                  color = "black", fontface = "bold", max.overlaps = 20) +
+  geom_text_repel(data = pca_scores, 
+                  aes(x = PC1, y = PC2, label = Timepoint), 
+                  size = 3, color = "black") +
+  scale_color_manual(values = c(
+    "Community defense traits" = "lightpink4", 
+    "Laboratory-tested clades" = "lightblue4", 
+    "Untested clades" = "grey80")) +
+  labs(title = "Lake Microcystis Clade Composition and Defense Trait",
+       x = paste0("PC1 (", round(variance_explained[1], 1), "%)"),
+       y = paste0("PC2 (", round(variance_explained[2], 1), "%)"),
+       color = "PCA Loadings") +
+  theme_pubclean()+
+  theme(plot.title= element_text(size=15,color='black',hjust=0.39,face = "bold"),
+        axis.line = element_line(size=0, colour = "black"),
+          axis.ticks = element_line(size=1, colour = "black"),
+          axis.text.y = element_text(hjust = 0,size=12,color='black',face = "bold"),
+          axis.text.x = element_text(hjust = 0.5,size=12,color='black',face = "bold", angle = 90),
+          axis.title = element_text(size=12,color='black',face = "bold"),
+          #panel.background = element_rect(fill = "snow"),
+          panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+          legend.title = element_text(size=10,color='black',hjust=0.5, face = "bold"),
+          legend.position = 'right',
+          panel.grid.major = element_blank())
+ggsave("figures/fig3B/metaG_clade_trait_PCA_biplot.png", width = 8, height = 6, dpi = 300)
+```
+
+Since PC2 are describing the variation in community defense traits more than PC1, I will look at PC2 and PC3 to see if the separation between samples with different community defense traits is more clear.
+
+```{r}
+# Plot PCA biplot
+ggplot(pca_scores, aes(x = PC2, y = PC3)) +
+  geom_point(aes(fill = `Lake System`, shape = Month),size = 4) +
+  scale_fill_manual(name = "Lake System", 
+                    values = c("2018 Lake Erie" = "peachpuff2", 
+                               "2019 Lake Erie" = "cyan4", 
+                               "2019 Lake Huron" = "lightpink4")) +
+  scale_shape_manual(name = "Month", 
+                     values = c("06" = 21, "07" = 22, 
+                                "08" = 23,"09" = 24, "10" = 25))+
+  guides(fill = guide_legend(override.aes = list(shape = 21)),
+         alpha = "none",
+         shape = guide_legend(override.aes = list(fill = "grey80"))) +
+  geom_segment(data = pca_loadings %>%
+                 filter(seg_color %in% c('Laboratory-tested clades','Untested clades')), aes(x = 0, y = 0, 
+                                        xend = PC2*6, 
+                                        yend = PC3*6,
+                                        color = seg_color),
+                                        alpha = 0.8,
+                                        linewidth = 1.2, 
+               arrow = arrow(length = unit(0.1, "cm"))) +
+  geom_segment(data = pca_loadings%>%
+                 filter(seg_color %in% c('Community defense traits')), aes(x = 0, y = 0, 
+                                        xend = PC2*6, 
+                                        yend = PC3*6,
+                                        color = seg_color),
+                                        alpha = 0.8,
+                                        linewidth = 1.2, 
+               arrow = arrow(length = unit(0.1, "cm"))) +
+  geom_text_repel(data = pca_loadings, 
+                  aes(x = PC2*6, y = PC3*6, label = Clade), size = 3, 
+                  color = "black", fontface = "bold") +
+  geom_text_repel(data = pca_scores, 
+                  aes(x = PC2, y = PC3, label = Timepoint), 
+                  size = 3, color = "black") +
+  scale_color_manual(values = c(
+    "Community defense traits" = "lightpink4", 
+    "Laboratory-tested clades" = "lightblue4", 
+    "Untested clades" = "grey80")) +
+  labs(title = "Lake Microcystis Clade Composition and Defense Trait",
+       x = paste0("PC2 (", round(variance_explained[2], 1), "%)"),
+       y = paste0("PC3 (", round(variance_explained[3], 1), "%)"),
+       color = "PCA Loadings") +
+  theme_pubclean()+
+  theme(plot.title= element_text(size=15,color='black',hjust=0.39,face = "bold"),
+        axis.line = element_line(size=0, colour = "black"),
+          axis.ticks = element_line(size=1, colour = "black"),
+          axis.text.y = element_text(hjust = 0,size=12,color='black',face = "bold"),
+          axis.text.x = element_text(hjust = 0.5,size=12,color='black',face = "bold", angle = 90),
+          axis.title = element_text(size=12,color='black',face = "bold"),
+          #panel.background = element_rect(fill = "snow"),
+          panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+          legend.title = element_text(size=10,color='black',hjust=0.5, face = "bold"),
+          legend.position = 'right',
+          panel.grid.major = element_blank())
+ggsave("figures/fig3B/metaG_clade_trait_PCA23_biplot.png", width = 8, height = 6, dpi = 300)
+```
+```{r}
+# Plot PCA biplot
+ggplot(pca_scores, aes(x = PC3, y = PC4)) +
+  geom_point(aes(fill = `Lake System`, shape = Month),size = 4, alpha = 0.5) +
+  scale_fill_manual(name = "Lake System", 
+                    values = c("2018 Lake Erie" = "peachpuff2", 
+                               "2019 Lake Erie" = "cyan4", 
+                               "2019 Lake Huron" = "lightpink4")) +
+  scale_shape_manual(name = "Month", 
+                     values = c("06" = 21, "07" = 22, 
+                                "08" = 23,"09" = 24, "10" = 25))+
+  guides(fill = guide_legend(override.aes = list(shape = 21)),
+         alpha = "none",
+         shape = guide_legend(override.aes = list(fill = "grey80"))) +
+  geom_segment(data = pca_loadings %>%
+                 filter(seg_color %in% c('Laboratory-tested clades','Untested clades')), aes(x = 0, y = 0, 
+                                        xend = PC3*5, 
+                                        yend = PC4*5,
+                                        color = seg_color),
+                                        alpha = 0.8,
+                                        linewidth = 1.2, 
+               arrow = arrow(length = unit(0.1, "cm"))) +
+  geom_segment(data = pca_loadings%>%
+                 filter(seg_color %in% c('Community defense traits')), aes(x = 0, y = 0, 
+                                        xend = PC3*5, 
+                                        yend = PC4*5,
+                                        color = seg_color),
+                                        alpha = 1,
+                                        linewidth = 1.2, 
+               arrow = arrow(length = unit(0.1, "cm"))) +
+  geom_text_repel(data = pca_loadings, 
+                  aes(x = PC3*6, y = PC4*6, label = Clade), size = 2.5, 
+                  color = "black", fontface = "bold", max.overlaps = 10) +
+  geom_text_repel(data = pca_scores, 
+                  aes(x = PC3, y = PC4, label = Timepoint), 
+                  size = 2, color = "black", max.overlaps = 10) +
+  scale_color_manual(values = c(
+    "Community defense traits" = "lightpink4", 
+    "Laboratory-tested clades" = "lightblue4", 
+    "Untested clades" = "grey80")) +
+  labs(title = "Lake Microcystis Clade Composition and Defense Trait",
+       x = paste0("PC3 (", round(variance_explained[3], 1), "%)"),
+       y = paste0("PC4 (", round(variance_explained[4], 1), "%)"),
+       color = "PCA Loadings") +
+  theme_pubclean()+
+  theme(plot.title= element_text(size=15,color='black',hjust=0.39,face = "bold"),
+        axis.line = element_line(size=0, colour = "black"),
+          axis.ticks = element_line(size=1, colour = "black"),
+          axis.text.y = element_text(hjust = 0,size=15,color='black',face = "bold"),
+          axis.text.x = element_text(hjust = 0.5,size=15,color='black',face = "bold", angle = 90),
+          axis.title = element_text(size=12,color='black',face = "bold"),
+          #panel.background = element_rect(fill = "snow"),
+          panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+          legend.title = element_text(size=10,color='black',hjust=0.5, face = "bold"),
+          legend.position = 'right',
+          panel.grid.major = element_blank())
+ggsave("figures/fig3B/metaG_clade_trait_PCA34_biplot.png", width = 6.5, height = 4.5, dpi = 300)
+```
+
+```{r}
+# Scree plot
+plot_var_exp <- data.frame(
+  PC = paste0("PC", 1:length(variance_explained)),
+  Variance_Explained = round(variance_explained, 1)
+)
+
+ggplot(plot_var_exp, aes(x = reorder(PC, Variance_Explained, decreasing = T), y = Variance_Explained)) +
+  geom_bar(stat = 'identity', fill = 'grey30') +
+  geom_line() +
+  geom_point() +
+  ggrepel::geom_text_repel(aes(label = paste0(Variance_Explained, "%")), 
+                           size = 5, fontface = "bold", max.overlaps = 10) +
+  labs(title = "Scree Plot of PCA",
+       x = "Principal Components", y = "Variance Explained (%)") +
+  theme_pubclean()+
+    theme(plot.title= element_text(size=15,color='black',hjust=0.39,face = "bold"),
+          axis.line = element_line(linewidth=0, colour = "black"),
+          axis.ticks = element_line(size=1, colour = "black"),
+          axis.text.y = element_text(hjust = 0,size=10,color='black',face = "bold"),
+          axis.text.x = element_text(hjust = 0.5,size=12,color='black',face = "bold", angle = 90),
+          axis.title = element_text(size=15,color='black',face = "bold"),
+          panel.background = element_rect(fill = "grey100"),
+          panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+          legend.title = element_text(size=10,color='black',hjust=0.5, face = "bold"),
+          legend.text = element_text(size = 8),
+          legend.box = "vertical",
+          legend.position = "right",
+          panel.grid.major = element_blank())
+
+ggsave("figures/fig3B/suppl_clade_trait_PCA_scree_plot.png", width = 6, height = 4, dpi = 300)
+```
+

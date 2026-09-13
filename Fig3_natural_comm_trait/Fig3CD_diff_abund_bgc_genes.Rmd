@@ -1,0 +1,675 @@
+---
+title: "Fig3CD_diff_abund_bgc_genes"
+author: "Yu-Cheng Lin"
+date: "2026-05-31"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggrepel)
+library(ggpubr)
+library(ggplot2)
+library(FactoMineR)
+```
+
+# Gene abundance by sample
+
+This script analyzes target gene abundance from metagenomic samples across different phases of the bloom and treatments (control vs. quagga mussel feeding).
+
+Read data from the directory `./inputs/pangenome/`. These are the rpkm values reported by bbmap when I did recruitment mapping conpetitively of the metagenomic reads to the *Microcystis* pangenome. 
+
+```{r}
+# Mapped read counts reported by BBMap: these are the numbers reported from the output log of bbmap. You can find the original numbers in *.rpkm.txt files.
+mapped_read_counts <- read.table("inputs/mapped_read_counts.txt", sep = "\t", header = TRUE) %>%
+  unglue::unglue_unnest(exp_date, "{year}_{month}_{day}", remove = F)
+
+ref_genotype <- 'pangenome'
+rpkm_files <- list.files(file.path(paste0("inputs/",ref_genotype)), pattern = "*.id95.rpkm.txt", full.names = TRUE)
+rpkm_colnames <- c('Name', 'Length', 'Bases', 'Coverage', 'Reads', 'RPKM', 'Frags', 'FPKM')
+rpkm_list <- list()
+for (file in seq_along(rpkm_files)) {
+  sample_name <- str_remove(basename(rpkm_files[file]), ".rpkm.txt")
+  rpkm_data <- read.table(rpkm_files[file], header = FALSE, sep = "\t", col.names = rpkm_colnames) %>%
+    mutate(sample = basename(rpkm_files[file]) %>% str_remove("_recruitment.id95.rpkm.txt"))
+  rpkm_list[[file]] <- rpkm_data
+}
+```
+
+# Annotate BGC genes
+
+Pangenome genes were annotated with the curated BGC database `BGCdb_seed5.fa` (Hart et al., 2026) using the script `blast_targets.py`. 
+
+```{r}
+bgc_annotaion <- read.table("inputs/pan_genome_BGCdb_blastn_table.txt", header = TRUE, sep = "\t")
+BGCdb_key <- read.csv("inputs/BGCdb_seed5_key.csv", header = TRUE) %>%
+  mutate(Main_Product = case_when(
+    New_BGC_name == 'Cyanobactin-Microcystis aeruginosa WLECC' & grepl('ctg13', Gene) ~'Cyanobactin_ctg13',
+    New_BGC_name == 'Cyanobactin-Microcystis aeruginosa WLECC' & grepl('ctg39', Gene) ~'Cyanobactin_ctg39',
+    New_BGC_name == 'Cyanobactin-Microcystis aeruginosa WLECC' & grepl('ctg115', Gene) ~'Cyanobactin_ctg115',
+    New_BGC_name == 'LAP-Microcystis aeruginosa WLECC' & grepl('ctg5', Gene) ~'LAP_ctg5',
+    New_BGC_name == 'lanthipeptide-Microcystis aeruginosa WLECC' & grepl('ctg3', Gene) ~'Lanthipeptide_ctg3',
+    New_BGC_name == 'lanthipeptide-Microcystis aeruginosa WLECC' & grepl('ctg83', Gene) ~'Lanthipeptide_ctg83',
+    New_BGC_name == 'lanthipeptide-Microcystis aeruginosa WLECC' & grepl('ctg60', Gene) ~'Lanthipeptide_ctg60',
+    grepl('Microcystin LR-Microcystis', New_BGC_name) ~ 'Microcystin',
+    TRUE ~ Main_Product
+  )) %>%
+  select(Header, Main_Product, Biosynthetic_Class, Organism, Gene, New_BGC_name,
+         gene_type, pos_in_bgc, core_genes, genes_in_bgc)
+
+## how many genes in the pangenome are annotated as BGCs?
+cluster_num <- bgc_annotaion %>%
+  group_by(Reference_Name) %>%
+  summarise(n_bgc = n())
+# are there multiple hits to the same gene?
+gene_num <- bgc_annotaion %>%
+  group_by(Query_Name) %>%
+  summarise(n_gene = n())
+
+BGC_genes <- bgc_annotaion %>%
+  filter(Reference_Name!="Unmatched") %>%
+  left_join(BGCdb_key, by = c("Reference_Name" = "Header"))
+```
+
+## Single-copy core genes
+
+This table are extracted by `pull_genes_from_pangenomes.Rmd`.
+
+The Microcystis pangenome (Kiledal et al., 2024) was built by Panaroo and annotated by Bakta, which can be accessed through this [link](https://zenodo.org/records/7847321). Anders used the criteria of at least presenting in 90% of the genomes to account for the reference incompletness. However, I want to get the most representative sequences so I used 98%.
+
+```{r}
+core_genes <- read.csv("inputs/Microcystis_core_genes.csv", header = TRUE) 
+core_gene_list <- core_genes %>%
+  select(Gene, Annotation) %>%
+  mutate(core_gene = TRUE) %>%
+  rename(gene_name = Gene)
+bgc_gene_list <- BGC_genes %>%
+  select(Query_Name, New_BGC_name) %>%
+  mutate(bgc_gene = TRUE) %>%
+  rename(gene_name = Query_Name)
+## Check overlapping
+gene_table <- core_gene_list %>%
+  full_join(bgc_gene_list, by = "gene_name")%>%
+  mutate(overlap = if_else(!is.na(core_gene) & !is.na(bgc_gene), TRUE, FALSE)) %>%
+  mutate(gene_type = case_when(overlap == TRUE ~ 'BGC & single-copy core gene',
+                           overlap == FALSE & !is.na(core_gene) ~ 'single-copy core gene',
+                           overlap == FALSE & !is.na(bgc_gene) ~ 'BGC gene'))
+```
+
+## Combine annotation
+
+```{r}
+rpkm_data <- bind_rows(rpkm_list) %>%
+  # Transform sample name to a more simple format
+  mutate(sample = str_replace(str_extract(sample, "ND-\\d{1,2}"), "ND-", "ND")) %>%
+  rename(gene_name = Name) %>% 
+  left_join(gene_table %>% select(gene_name, gene_type), by = "gene_name") %>%
+  left_join(BGC_genes %>% select(Query_Name, New_BGC_name, Main_Product), by = c("gene_name" = "Query_Name")) %>%
+  # standardize the depth with the mapped read counts
+  left_join(mapped_read_counts, by = "sample")
+  
+
+# summarize how many core genes and bgc genes are there
+gene_summary <- rpkm_data %>%
+  group_by(gene_type) %>%
+  summarise(num_genes = n_distinct(gene_name))
+gene_summary
+```
+
+## Normalization
+
+TPM is more popular in abundance analysis lately because it is normalized to the gene length before normalizing to the proportion of reads mapped in this sample. This make it easier to compare samples directly.
+
+```{r}
+abund_final <- rpkm_data %>%
+  mutate(length_kb = Length / 1000,
+         RPK = Reads / length_kb) %>%
+  group_by(sample) %>%
+  mutate(sum_RPK_per_million = sum(RPK)/1e6) %>%
+  ungroup() %>%
+  mutate(TPM = RPK / sum_RPK_per_million) %>%
+  select(sample, year, exp_date, treatment, 
+         gene_name, gene_type, New_BGC_name, Main_Product,
+         Frags, RPKM, FPKM, TPM, lake)%>%
+  mutate(exp_date = factor(exp_date),
+         treatment = factor(treatment, levels = c("control", "quagga")))  %>%
+  separate(exp_date, into = c("Year", "Month", "Day"), sep = "_", remove = F) %>%
+  mutate(Year = paste0("20", Year)) %>%
+  mutate(month_date = paste0(Month, "/", Day)) %>%
+  mutate(lake = case_when(
+    lake == "LE" ~ "Lake Erie",
+    lake == "LH" ~ "Lake Huron",
+    TRUE ~ lake
+  ))
+```
+
+## Check core gene abundance across time points and treatments
+
+Plot median TPM
+
+```{r, message = FALSE}
+core_abund <- abund_final %>%
+  filter(gene_type == "single-copy core gene") %>%
+  group_by(sample, exp_date, lake, treatment) %>%
+  summarise(mean_core_TPM = mean(TPM),
+            sd_core_TPM = sd(TPM),
+            median_core_TPM = median(TPM)) %>%
+  ungroup() %>%
+  mutate(exp_date = factor(exp_date),
+         treatment = factor(treatment, levels = c("control", "quagga")))  %>%
+  separate(exp_date, into = c("Year", "Month", "Day"), sep = "_", remove = F) %>%
+  mutate(Year = paste0("20", Year)) %>%
+  mutate(month_date = paste0(Month, "/", Day)) %>%
+  mutate(lake = case_when(
+    lake == "LE" ~ "Lake Erie",
+    lake == "LH" ~ "Lake Huron",
+    TRUE ~ lake
+  ))
+# plot core-gene abundance across timepoints and treatments
+ggplot(core_abund, aes(x = month_date, y = median_core_TPM, fill = treatment)) +
+  geom_violin(trim = FALSE, alpha = 0.8) +
+  geom_boxplot(width = 0.01, position = position_dodge(0.9), outlier.shape = NA, alpha = 0.7) +
+  facet_wrap(~ lake*Year, nrow = 1, scale = "free_x") +
+  labs(title = "Microcystis single-copy core gene abundance",
+       x = "Experiment Date",
+       y = "Median TPM of Core Genes") +
+  scale_fill_manual(name = "Treatment", 
+                    values = c("control" = "lightpink3",
+                               "quagga" = "cadetblue3")) +
+  theme_pubclean()+
+    theme(plot.title= element_text(size=15,color='black',hjust=0.39,face = "bold"),
+          axis.line = element_line(linewidth=0, colour = "black"),
+          axis.ticks = element_line(size=1, colour = "black"),
+          axis.text.y = element_text(hjust = 0,size=15,color='black',face = "bold"),
+          axis.text.x = element_text(hjust = 1,vjust = 1,size=12,color='black',face = "bold", angle = 30),
+          axis.title = element_text(size=15,color='black',face = "bold"),
+          strip.background = element_blank(),
+          panel.background = element_rect(fill = "grey100"),
+          panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+          legend.title = element_text(size=10,color='black',hjust=0.5, face = "bold"),
+          legend.position = "right",
+          panel.grid.major = element_blank())
+ggsave("figures/fig3C/Microcystis_core_gene_abund.png", width = 8, height = 4 , dpi = 300)
+```
+
+### Normalize all gene abundance to the median core gene abundance in that sample
+
+```{r, message = FALSE}
+norm_TPM <- abund_final %>%
+  select(sample, year, exp_date, treatment, lake, gene_name, gene_type, New_BGC_name, Main_Product, TPM) %>%
+  left_join(core_abund, by = c("sample", "exp_date", "treatment", "lake")) %>%
+  mutate(norm_TPM = TPM / median_core_TPM) %>% 
+  mutate(norm_TPM = if_else(is.nan(norm_TPM), 0, norm_TPM),
+         norm_TPM = if_else(norm_TPM == Inf, 0, norm_TPM)) %>%
+  select(sample,year, exp_date, treatment, lake, gene_name, gene_type, New_BGC_name, Main_Product, TPM, norm_TPM, median_core_TPM)
+
+write.csv(norm_TPM, "output_tables/Pan_Genome_id95_normalized_TPM.csv", row.names = FALSE)
+
+## Raw TPM abundance distribution across treatments and dates
+ggplot(norm_TPM, aes(x = exp_date, y = TPM, color = treatment)) +
+  geom_violin() +
+  labs(title = "Raw TPM Abundance Across Timepoints and Treatments",
+       x = "Experiment Date",
+       y = "TPM") +
+  facet_grid(rows = vars(lake), cols = vars(year), scales = "free_x") +
+  theme_pubclean()+
+    theme(plot.title= element_text(size=15,color='black',hjust=0.39,face = "bold"),
+          axis.line = element_line(linewidth=0, colour = "black"),
+          axis.ticks = element_line(size=1, colour = "black"),
+          axis.text.y = element_text(hjust = 0,size=15,color='black',face = "bold"),
+          axis.text.x = element_text(hjust = 0.5,size=15,color='black',face = "bold", angle = 90),
+          axis.title = element_text(size=15,color='black',face = "bold"),
+          panel.background = element_rect(fill = "grey100"),
+          panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+          legend.title = element_text(size=10,color='black',hjust=0.5, face = "bold"),
+          legend.position = "none",
+          panel.grid.major = element_blank())
+```
+
+# Differential abundance analysis
+
+```{r}
+library(edgeR)
+library(limma)
+## Prepare metadata and count matrix
+metadata <- norm_TPM %>%
+  select(sample, exp_date, treatment, lake) %>%
+  distinct() %>%
+  mutate(group = as.factor(paste0(treatment, "_", exp_date)))
+
+## Design matrix for differential expression analysis
+design <- model.matrix(~ 0 + group, data = metadata)
+colnames(design) <- levels(metadata$group)
+
+## contrasts
+contrast_matrix <- makeContrasts(
+  logqc_LE_18_06_28 = quagga_18_06_28 - control_18_06_28,
+  logqc_LE_18_07_10 = quagga_18_07_10 - control_18_07_10,
+  logqc_LE_18_07_25 = quagga_18_07_25 - control_18_07_25,
+  logqc_LE_18_08_15 = quagga_18_08_15 - control_18_08_15,
+  logqc_LE_18_10_4 = quagga_18_10_4 - control_18_10_4,
+  logqc_LH_19_06_12 = quagga_19_06_12 - control_19_06_12,
+  logqc_LE_19_07_18 = quagga_19_07_18 - control_19_07_18,
+  logqc_LE_19_07_31 = quagga_19_07_31 - control_19_07_31,
+  logqc_LE_19_08_13 = quagga_19_08_13 - control_19_08_13,
+  logqc_LH_19_08_22 = quagga_19_08_22 - control_19_08_22,
+  logqc_LE_19_09_18 = quagga_19_09_18 - control_19_09_18,
+  
+  levels = design
+)
+
+core_genes <- abund_final %>%
+  filter(gene_type == "single-copy core gene") %>%
+  mutate(New_BGC_name = "single-copy core gene",
+         Main_Product = "core") %>%
+  rename(Query_Name = "gene_name") %>%
+  select(Query_Name, New_BGC_name, Main_Product) %>%
+  unique() %>%
+  mutate(Gene = Query_Name)
+
+
+target_genes <- BGC_genes %>%
+  select(Query_Name, New_BGC_name, Main_Product,Gene) %>%
+  #rbind(core_genes) %>%
+  mutate(Main_Product = case_when(
+    Gene == "ctg83_18_lanthipeptide_21" ~ "lanthipeptide",
+    TRUE ~ Main_Product
+  )) %>%
+  mutate(Gene = case_when(
+    Gene == "ctg83_18_lanthipeptide_21" ~ "ctg83_18",
+    TRUE ~ Gene
+  )) %>%
+  separate(Main_Product, into = c("short_product_name", "rest"), sep = ",", extra = "drop", fill = "right")
+```
+
+## Without normalization to core genes
+
+```{R}
+TPM_count_matrix <- norm_TPM %>%
+  select(sample, gene_name, TPM) %>%
+  pivot_wider(names_from = sample, values_from = TPM) %>%
+  column_to_rownames(var = "gene_name") %>%
+  as.matrix()
+
+
+TPM_count_matrix <- log2(TPM_count_matrix + 1) # log-transform the count matrix
+
+## Fit the linear model and perform differential expression analysis
+fit <- lmFit(TPM_count_matrix, design)
+fit2 <- contrasts.fit(fit, contrast_matrix)
+fit2 <- eBayes(fit2, trend = TRUE)
+# extract results for each contrast
+results_list <- list()
+for (contrast in colnames(contrast_matrix)) {
+  contrast_tb <- topTable(fit2, coef = contrast, number = Inf, adjust.method = "BH")
+  filt_contrast_tb <- contrast_tb %>%
+    rownames_to_column(var = "gene_name") %>%
+    mutate(significant = case_when(
+      adj.P.Val < 0.05 & logFC > 0 ~ "Increased",
+      adj.P.Val < 0.05 & logFC < 0 ~ "Decreased",
+      TRUE ~ "Not Significant"
+    )) %>%
+    arrange(adj.P.Val) %>%
+    mutate(contrast = contrast) %>%
+    mutate(Year = str_extract(contrast, "18|19"),
+           lake = str_extract(contrast, "LE|LH"),
+           date = str_extract(contrast, "\\d{2}_\\d{2}_\\d{1,2}"))%>%
+  separate(date, into = c("Year", "Month", "Date"), sep = "_", remove = F, extra = "merge") %>%
+    drop_na()
+  results_list[[contrast]] <- filt_contrast_tb
+  
+}
+
+TPM_results_df <-  bind_rows(results_list) %>%
+  filter(gene_name %in% target_genes$Query_Name) %>%
+  left_join(target_genes, by = c("gene_name" = "Query_Name")) %>%
+  mutate(sig_name = case_when(
+    significant == "Increased" ~ paste0(short_product_name, " (", Gene, ")"),
+    significant == "Decreased" ~ paste0(short_product_name, " (", Gene, ")"),
+    TRUE ~ NA_character_
+  )) %>%
+  mutate(lake = case_when(
+    lake == "LE" ~ "Lake Erie",
+    lake == "LH" ~ "Lake Huron",
+    TRUE ~ lake
+  )) %>%
+  mutate(Year = paste0(20,Year)) %>%
+  mutate(Year_lake = paste0(Year," ",lake))
+
+```
+
+```{r}
+TPM_bgc_volcano_df <- TPM_results_df%>%
+  mutate(Month = as.factor(Month)) %>%
+  mutate(Year_lake = as.factor(Year_lake)) %>%
+  mutate(sig_label = case_when(
+    significant != "Not Significant" ~ Year_lake,
+    TRUE ~ "No Significant Change"
+  ))%>%
+  mutate(clean_prod_name = case_when(
+    str_detect(short_product_name, "Terpene") ~ "Terpenes",
+    str_detect(short_product_name, "anabaenopeptin 908") ~ "Anabaenopeptin",
+    str_detect(short_product_name, "cyanopeptolin") ~ "Cyanopeptolin",
+    short_product_name == "piricyclamide 7005E1" ~ "Cyanobactins",
+    short_product_name == "prenylagaramide B" ~ "Cyanobactins",
+    short_product_name == "anacyclamide A10" ~ "Cyanobactins",
+    str_detect(short_product_name, "Cyanobactin") ~ "Cyanobactins",
+    short_product_name == "Anacyclamide" ~ "Cyanobactins",
+    short_product_name == "kawaguchipeptin A" ~ "Cyanobactins",
+    short_product_name == "kasumigamide" ~ "Cyanobactins",
+    short_product_name == "microcyclamide" ~ "Cyanobactins",
+    short_product_name == "microginin" ~ "Microginin",
+    short_product_name == "microviridin B" ~ "Microviridin B",
+    str_detect(short_product_name, "lanthipeptide") ~ "Lanthipeptide",
+    str_detect(short_product_name, "Lanthipeptide") ~ "Lanthipeptide",
+    short_product_name == "aeruginosin 98-A" ~ "Aeruginosin",
+    short_product_name == "microcystin" ~ "Microcystin",
+    TRUE ~ short_product_name
+  ))
+```
+
+
+```{r}
+ggplot(TPM_bgc_volcano_df, aes(x = logFC, y = -log10(adj.P.Val))) +
+  geom_point(aes(fill = as.factor(sig_label), shape = as.character(Month), alpha = sig_label), size = 4, color = "black") +
+  scale_fill_manual(name = "Lake System", 
+                    values = c("2018 Lake Erie" = "peachpuff2", 
+                               "2019 Lake Erie" = "cyan4", 
+                               "2019 Lake Huron" = "lightpink4",
+                               "No change" = "grey80")) +
+  scale_alpha_manual(values = c("2018 Lake Erie" = 1, 
+                                "2019 Lake Erie" = 1, 
+                                "2019 Lake Huron" = 1,
+                                "No Significant Change" = 0.3)) +
+  scale_shape_manual(name = "Month", 
+                     values = c("06" = 21, "07" = 22, 
+                                "08" = 23, "09" = 24, "10" = 25), na.value = 4) +
+  guides(fill = guide_legend(override.aes = list(shape = 21)),
+         alpha = "none",
+         shape = guide_legend(override.aes = list(fill = "black"))) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
+  geom_hline(yintercept = -log10(0.05), linetype = "dashed", color = "black") +
+  labs(title = "Unpalatability genes",
+       x = "Log2 Fold Change of TPM (Quagga vs Control)", 
+       y = "-Log10 Adjusted P-value") +
+  theme_pubclean()+
+  theme(plot.title= element_text(size=15,color='black',hjust=0.39,face = "bold"),
+          axis.line = element_line(linewidth=0, colour = "black"),
+          axis.ticks = element_line(size=1, colour = "black"),
+          axis.text.y = element_text(hjust = 0,size=15,color='black',face = "bold"),
+          axis.text.x = element_text(hjust = 0.5,size=15,color='black',face = "bold", angle = 90),
+          axis.title = element_text(size=15,color='black',face = "bold"),
+          panel.background = element_rect(fill = "grey100"),
+          panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+          legend.title = element_text(size=10,color='black',hjust=0.5, face = "bold"),
+          legend.text = element_text(size = 8),
+          legend.box = "vertical",
+          legend.position = "right",
+          panel.grid.major = element_blank())
+
+ggsave("figures/fig3C/Pan_Genome_sigBGC_withoutnorm_volcano_year_lake.png", width = 6, height = 5 , dpi = 300)
+```
+
+## With normalization to core genes
+
+```{R}
+normTPM_count_matrix <- norm_TPM %>%
+  select(sample, gene_name, norm_TPM) %>%
+  pivot_wider(names_from = sample, values_from = norm_TPM) %>%
+  column_to_rownames(var = "gene_name") %>%
+  as.matrix()
+
+normTPM_count_matrix <- log2(normTPM_count_matrix + 1) # log-transform the count matrix
+
+## Fit the linear model and perform differential expression analysis
+fit <- lmFit(normTPM_count_matrix, design)
+fit2 <- contrasts.fit(fit, contrast_matrix)
+fit2 <- eBayes(fit2, trend = TRUE)
+# extract results for each contrast
+results_list <- list()
+for (contrast in colnames(contrast_matrix)) {
+  contrast_tb <- topTable(fit2, coef = contrast, number = Inf, adjust.method = "BH")
+  filt_contrast_tb <- contrast_tb %>%
+    rownames_to_column(var = "gene_name") %>%
+    mutate(significant = case_when(
+      adj.P.Val < 0.05 & logFC > 0 ~ "Increased",
+      adj.P.Val < 0.05 & logFC < 0 ~ "Decreased",
+      TRUE ~ "Not Significant"
+    )) %>%
+    arrange(adj.P.Val) %>%
+    mutate(contrast = contrast) %>%
+    mutate(Year = str_extract(contrast, "18|19"),
+           lake = str_extract(contrast, "LE|LH"),
+           date = str_extract(contrast, "\\d{2}_\\d{2}_\\d{1,2}"))%>%
+  separate(date, into = c("Year", "Month", "Date"), sep = "_", remove = F, extra = "merge") %>%
+    drop_na()
+  results_list[[contrast]] <- filt_contrast_tb
+  
+}
+
+normTPM_results_df <-  bind_rows(results_list) %>%
+  filter(gene_name %in% target_genes$Query_Name) %>%
+  left_join(target_genes, by = c("gene_name" = "Query_Name")) %>%
+  mutate(sig_name = case_when(
+    significant == "Increased" ~ paste0(short_product_name, " (", Gene, ")"),
+    significant == "Decreased" ~ paste0(short_product_name, " (", Gene, ")"),
+    TRUE ~ NA_character_
+  )) %>%
+  mutate(lake = case_when(
+    lake == "LE" ~ "Lake Erie",
+    lake == "LH" ~ "Lake Huron",
+    TRUE ~ lake
+  )) %>%
+  mutate(Year = paste0(20,Year)) %>%
+  mutate(Year_lake = paste0(Year," ",lake))
+
+write.csv(normTPM_results_df, "output_tables/Pan_Genome_sigBGC_volcano_data.csv", quote = F, row.names = FALSE)
+```
+
+```{r}
+#results_df_clean <- read.csv("output_tables/Pan_Genome_sigBGC_volcano_data.csv", header = T) 
+normTPM_bgc_volcano_df <- normTPM_results_df%>%
+  mutate(Month = as.factor(Month)) %>%
+  mutate(Year_lake = as.factor(Year_lake)) %>%
+  mutate(sig_label = case_when(
+    significant != "Not Significant" ~ Year_lake,
+    TRUE ~ "No Significant Change"
+  ))%>%
+  mutate(clean_prod_name = case_when(
+    str_detect(short_product_name, "Terpene") ~ "Terpenes",
+    str_detect(short_product_name, "anabaenopeptin 908") ~ "Anabaenopeptin",
+    str_detect(short_product_name, "cyanopeptolin") ~ "Cyanopeptolin",
+    short_product_name == "piricyclamide 7005E1" ~ "Cyanobactins",
+    short_product_name == "prenylagaramide B" ~ "Cyanobactins",
+    short_product_name == "anacyclamide A10" ~ "Cyanobactins",
+    str_detect(short_product_name, "Cyanobactin") ~ "Cyanobactins",
+    short_product_name == "Anacyclamide" ~ "Cyanobactins",
+    short_product_name == "kawaguchipeptin A" ~ "Cyanobactins",
+    short_product_name == "kasumigamide" ~ "Cyanobactins",
+    short_product_name == "microcyclamide" ~ "Cyanobactins",
+    short_product_name == "microginin" ~ "Microginin",
+    short_product_name == "microviridin B" ~ "Microviridin B",
+    str_detect(short_product_name, "lanthipeptide") ~ "Lanthipeptide",
+    str_detect(short_product_name, "Lanthipeptide") ~ "Lanthipeptide",
+    short_product_name == "aeruginosin 98-A" ~ "Aeruginosin",
+    short_product_name == "microcystin" ~ "Microcystin",
+    TRUE ~ short_product_name
+  ))
+```
+
+
+```{r}
+ggplot(normTPM_bgc_volcano_df, aes(x = logFC, y = -log10(adj.P.Val))) +
+  geom_point(aes(fill = as.factor(sig_label), shape = as.character(Month), alpha = sig_label), size = 4, color = "black") +
+  scale_fill_manual(name = "Lake System", 
+                    values = c("2018 Lake Erie" = "peachpuff2", 
+                               "2019 Lake Erie" = "cyan4", 
+                               "2019 Lake Huron" = "lightpink4",
+                               "No change" = "grey80")) +
+  scale_alpha_manual(values = c("2018 Lake Erie" = 1, 
+                                "2019 Lake Erie" = 1, 
+                                "2019 Lake Huron" = 1,
+                                "No Significant Change" = 0.3)) +
+  scale_shape_manual(name = "Month", 
+                     values = c("06" = 21, "07" = 22, 
+                                "08" = 23, "09" = 24, "10" = 25), na.value = 4) +
+  guides(fill = guide_legend(override.aes = list(shape = 21)),
+         alpha = "none",
+         shape = guide_legend(override.aes = list(fill = "black"))) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
+  geom_hline(yintercept = -log10(0.05), linetype = "dashed", color = "black") +
+  #ggrepel::geom_text_repel(aes(label = sig_name), max.overlaps = 15,
+  #                         size = 2, alpha = 1, fontface = 'bold') +
+  labs(title = "Unpalatability genes",
+       x = "Log2 Fold Change of TPM (Quagga vs Control)", 
+       y = "-Log10 Adjusted P-value") +
+  theme_pubclean()+
+  theme(plot.title= element_text(size=15,color='black',hjust=0.39,face = "bold"),
+          axis.line = element_line(linewidth=0, colour = "black"),
+          axis.ticks = element_line(size=1, colour = "black"),
+          axis.text.y = element_text(hjust = 0,size=15,color='black',face = "bold"),
+          axis.text.x = element_text(hjust = 0.5,size=15,color='black',face = "bold", angle = 90),
+          axis.title = element_text(size=15,color='black',face = "bold"),
+          panel.background = element_rect(fill = "grey100"),
+          panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+          legend.title = element_text(size=10,color='black',hjust=0.5, face = "bold"),
+          legend.text = element_text(size = 8),
+          legend.box = "vertical",
+          legend.position = "right",
+          panel.grid.major = element_blank())
+
+ggsave("figures/fig3C/Pan_Genome_sigBGC_volcano_year_lake.png", width = 6, height = 5 , dpi = 300)
+```
+
+Significant BGC relative abundance
+
+```{r}
+bgc_gene_nums <- normTPM_bgc_volcano_df %>%
+  group_by(clean_prod_name, significant, date,Year_lake) %>%
+  summarise(num_genes = n())%>%
+  pivot_wider(names_from = "significant",values_from ="num_genes",values_fill = 0) %>%
+  mutate(num_genes = rowSums(across(where(is.numeric)))) %>%
+  ungroup()
+
+all_bgc_gene_num <- bgc_gene_nums %>%
+  select(clean_prod_name,Year_lake,num_genes) %>%
+  unique() %>%
+  group_by(Year_lake) %>%
+  summarise(total_genes = sum(num_genes))
+
+sig_BGC_results <- normTPM_bgc_volcano_df %>%
+  filter(significant != "Not Significant") %>%
+  group_by(clean_prod_name, Year_lake,significant) %>%
+  summarise(num_sig = n()) %>%
+  ungroup() %>%
+  group_by(Year_lake,significant) %>%
+  mutate(total_num_sig = sum(num_sig)) %>%
+  left_join(bgc_gene_nums %>%
+              select(clean_prod_name,Year_lake,num_genes) %>%
+              unique(), by = c("clean_prod_name","Year_lake") ) %>%
+  mutate(freq_sig = (num_sig/total_num_sig)) %>%
+  mutate(sig_label = case_when(
+    freq_sig>0.08 ~ paste0(clean_prod_name," (",num_sig,")"),
+    TRUE ~ NA_character_
+  )) %>%
+  mutate(annotation  = case_when(
+    is.na(sig_label) ~ "Other BGCs",
+    TRUE ~ str_remove(sig_label, "\\s\\(.*\\)")
+  ))
+
+# plot relative abundance of significant BGC classes in each contrast
+ggplot(sig_BGC_results, aes(x = Year_lake, y = freq_sig*100, fill = annotation)) +
+  geom_bar(stat = "identity", position = "stack",alpha = 0.8) +
+  #geom_text(aes(label = sig_label), 
+  #                         position = position_stack(vjust = 0.5),
+  #                         size = 3, fontface = "bold") +
+  labs(title = "Category of Significantly Different Biosynthetic Genes",
+       x = NULL, y = NULL) +
+  scale_fill_brewer(palette = "Paired") +
+  facet_wrap(~significant, scale = "free_x") +
+  theme_pubclean()+
+    theme(plot.title= element_text(size=15,color='black',hjust=0.39,face = "bold"),
+          axis.line = element_line(linewidth=0, colour = "black"),
+          axis.ticks = element_line(size=1, colour = "black"),
+          axis.text.y = element_text(hjust = 0,size=10,color='black',face = "bold"),
+          axis.text.x = element_text(hjust = 1,vjust = 1,size=12,color='black',face = "bold", angle = 30),
+          axis.title = element_text(size=15,color='black',face = "bold"),
+          panel.background = element_blank(),
+          panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+          strip.background = element_rect(fill = "grey100", color = NULL, linewidth = 1.5),
+          strip.text.x.top = element_text(size=10,color='black',face = "bold"),
+          legend.title = element_text(size=10,color='black',hjust=0.5, face = "bold"),
+          legend.text = element_text(size = 10),
+          legend.box = "vertical",
+          legend.position = "right",
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank())
+
+ggsave("figures/fig3D/Pan_Genome_sig_inc_BGC_stackbar_year_lake.png", width = 10, height = 6, dpi = 300)
+```
+
+# Look at Microcystin between normalized and unnormalized results
+
+```{r}
+# extract microcystin results from both normalized and unnormalized results
+mcy_normTPM_results <- normTPM_bgc_volcano_df %>%
+  filter(clean_prod_name == "Microcystin") %>%
+  mutate(normalization = "Normalized to Core Genes")
+
+mcy_TPM_results <- TPM_bgc_volcano_df %>%
+  filter(clean_prod_name == "Microcystin") %>%
+  mutate(normalization = "Not Normalized to Core Genes")
+
+# plot volcano plots for microcystin results
+mcy_volcano_df <- bind_rows(mcy_normTPM_results, mcy_TPM_results) %>%
+  # remove "Microcystin" from sig_name
+  mutate(sig_name = str_remove(sig_name, "Microcystin")) 
+
+ggplot(mcy_volcano_df, aes(x = logFC, y = -log10(adj.P.Val))) +
+  geom_point(aes(fill = as.factor(sig_label), 
+                 shape = as.character(Month), 
+                 alpha = sig_label), size = 4, color = "black") +
+  scale_fill_manual(name = "Lake System", 
+                    values = c("2018 Lake Erie" = "peachpuff2", 
+                               "2019 Lake Erie" = "cyan4", 
+                               "2019 Lake Huron" = "lightpink4",
+                               "No change" = "grey80")) +
+  scale_alpha_manual(values = c("2018 Lake Erie" = 1, 
+                                "2019 Lake Erie" = 1, 
+                                "2019 Lake Huron" = 1,
+                                "No Significant Change" = 0.3)) +
+  scale_shape_manual(name = "Month", 
+                     values = c("06" = 21, "07" = 22, 
+                                "08" = 23, "09" = 24, "10" = 25), na.value = 4) +
+  guides(fill = guide_legend(override.aes = list(shape = 21)),
+         alpha = "none",
+         shape = guide_legend(override.aes = list(fill = "black"))) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
+  geom_hline(yintercept = -log10(0.05), linetype = "dashed", color = "black") +
+  labs(title = "Microcystin Biosynthetic Genes",
+       x = "Log2 Fold Change of TPM (Quagga vs Control)", 
+       y = "-Log10 Adjusted P-value") +
+  ggrepel::geom_text_repel(aes(label = sig_name), max.overlaps = 16,
+                           size = 2.5, alpha = 0.8, fontface = 'bold') +
+  facet_wrap(~normalization) +
+  theme_pubclean()+
+    theme(plot.title= element_text(size=15,color='black',hjust=0.39,face = "bold"),
+          axis.line = element_line(linewidth=0, colour = "black"),
+          axis.ticks = element_line(size=1, colour = "black"),
+          axis.text.y = element_text(hjust = 0,size=10,color='black',face = "bold"),
+          axis.text.x = element_text(hjust = 1,vjust = 1,size=12,color='black',face = "bold", angle = 30),
+          axis.title = element_text(size=15,color='black',face = "bold"),
+          panel.background = element_blank(),
+          panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+          strip.background = element_rect(fill = "grey100", color = NULL, linewidth = 1.5),
+          strip.text.x.top = element_text(size=10,color='black',face = "bold"),
+          legend.title = element_text(size=10,color='black',hjust=0.5, face = "bold"),
+          legend.text = element_text(size = 10),
+          legend.box = "vertical",
+          legend.position = "right",
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank())
+
+ggsave("figures/fig3D/Pan_Genome_sig_inc_BGC_microcystin_volcano.png", width = 8, height = 4, dpi = 300)
+```
