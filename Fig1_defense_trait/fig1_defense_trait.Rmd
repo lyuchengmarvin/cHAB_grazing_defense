@@ -1,0 +1,274 @@
+---
+title: "defense_trait_plot"
+author: "Yu-Cheng Lin"
+date: "2026-02-05"
+output: html_document
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ape)
+library(aplot)
+library(circlize)
+library(ggplot2)
+library(ggpubr)
+library(ggtree)
+library(phytools)
+library(tidyverse)
+library(treeio)
+```
+
+# Micrcystis Defense Traits
+
+Load mussel grazing experiment data based on Microcystis strains. These data came from `../Isolate_based_grazing_experiment/output/`. Check `../Isolate_based_grazing_experiment/LE_QMF_23.Rmd` for data processing detail.
+
+
+```{r}
+# Trait data summary from dreissinid mussel feeding experiments
+raw_defense_trait <- read.table('inputs/LE_QMF_23_IDM_trait_summary.out.txt', header = T, sep = '\t')
+defense_trait <- raw_defense_trait%>%
+  mutate(Strain = str_extract(Culture, '^[^.]+')) %>%
+  mutate(Strain = gsub('_', '-', Strain)) %>%
+  mutate(Strain = case_when(
+    Strain == 'LE17-10' ~ 'LE17-10A',
+    Strain == 'LE17-20' ~ 'LE17-20C',
+    Strain == 'LE19-282' ~ 'LE19-281',
+    Strain == 'LE18-13' ~ 'LE19-13',
+    TRUE ~ Strain
+  ))  %>%
+  # These strains have undissolvable pseudofeces, which will cause overestimation of the FI rate for Microcystis in the mixed treatment. Therefore, we will flag these strains as having pseudofeces.
+  mutate(pseudofeces = case_when(
+      Strain %in% c('LE19-197', 'LE19-196','LE19-59') ~ 'Undissolvable',
+      TRUE ~ 'Redissolved'
+    )) %>%
+  mutate(contamination = case_when(
+    # These strains were flagged as mixed culture by the Dick lab (source), so their trait might change over time.
+    Strain %in% c('LE19-12', 'LE19-59') ~ 'yes',
+    TRUE ~ 'no'
+  )) %>%
+  mutate(
+    # The amount of Microcystis ingested relative to the preferred food in the mixed treatment
+    Unpalatability = as.numeric(blugrn_mix_avg_FI / grn_mix_avg_FI),
+     # Total amount phytoplankton ingested in the mixed treatment
+    Inhibition = as.numeric(total_chla_mix_avg_FI)) %>%
+  select(Strain, pseudofeces, contamination, Unpalatability, Inhibition, blugrn_mix_avg_FI, grn_mix_avg_FI)
+
+# Genome metadata: annotated by Kiledal et al., 2024, Harmful Algae
+clade_info <- read.table('inputs/genome_metadata.txt', header = T, sep='\t') %>%
+  mutate(Strain = case_when(
+    Strain == 'LE17-10' ~ 'LE17-10A',
+    Strain == 'LE17-20' ~ 'LE17-20C',
+    Strain == 'LE19-282' ~ 'LE19-281',
+    Strain == 'LE18-13' ~ 'LE19-13',
+    TRUE ~ Strain
+  )) %>%
+  select(Strain, Clade) 
+
+# Combine trait data with clade info
+defense_clade_info <- defense_trait %>%
+  left_join(clade_info, by = 'Strain') %>%
+  select(Strain, Clade, Unpalatability, Inhibition, pseudofeces, contamination)
+```
+
+```{r}
+# Test if unpalatability and inhibition have a linear relationship
+model <- lm(Inhibition ~ Unpalatability, data = defense_clade_info)
+summary(model);hist(model$residuals);shapiro.test(model$residuals)
+```
+
+```{r}
+plot(model)
+```
+
+```{r}
+cor.test(defense_clade_info$Unpalatability, defense_clade_info$Inhibition, method = 'pearson')
+```
+
+```{r}
+new_data <- data.frame(Unpalatability = seq(min(defense_clade_info$Unpalatability), max(defense_clade_info$Unpalatability), length.out = 100))
+pred <- predict(model, newdata = new_data, interval = "confidence", se.fit = TRUE)
+new_data$predicted <- pred$fit
+new_data$upper <- pred$fit[, "upr"]
+new_data$lower <- pred$fit[, "lwr"]
+```
+
+
+```{r}  
+ggplot(defense_clade_info) +
+  geom_point(aes(x = Unpalatability, y = Inhibition, fill = Clade, shape = pseudofeces),size = 8, color = "grey30") +
+  geom_ribbon(data = new_data, aes(x = Unpalatability, ymin = lower, ymax = upper), alpha = 0.2, fill = "grey80") +
+  geom_line(data = new_data, aes(x = Unpalatability, y = predicted), color = "grey20", size = 1) +
+  #The standard FI rate for green algae is 34, which is the average FI of the green alga in the control treatment acclimated to chlamy-only culture in 2025.
+  geom_hline(yintercept = 34, color = 'grey30',linetype = 'dashed') +
+  annotate("text", x = 0.73, y = 36, hjust = 0,
+           label = "Grazing rate \non the preferred food", 
+           size = 5, color = "grey10", angle = 0) +
+  geom_vline(xintercept = 1, color = 'grey30',linetype = 'dotted') +
+  annotate("text", x = 0.95, y = -1.2 , hjust = 0, 
+           label = expression("Equal preference \nfor both food sources"), 
+           size = 5, color = "grey10", angle = 90) +
+  #ggrepel::geom_text_repel(aes(label = Strain,x = Unpalatability, y = Inhibition), max.overlaps = 20,size = 2, alpha = 0.8,fontface = 'bold', show.legend = F) +
+  scale_fill_manual(values = c('sienna2', 'lightblue2','lightgoldenrodyellow','grey60',
+                                 'lightpink4','plum3','palegreen3','lightblue4'),name = expression(bolditalic("Microcystis")~bold("clade"))) +
+  scale_shape_manual(values = c(21, 23), name = expression(bold("Expelled food (pseudofeces)"))) +
+  #scale_shape_manual(values = c(21, 23), name = 'Non-dissolvable Pseudofeces') +
+  guides(fill = guide_legend(override.aes = list(shape = 21))) +
+  labs(title = 'Two Dimensions of Microcystis Grazing Defense Traits',
+       x = 'Mussel selectivity for Microcystis \n (Microcystis : Preferred food)',
+       y = 'Total amount of phytoplankton ingested \n (ml/mg AFDW/hr)') +
+  theme_pubclean()+
+  theme(plot.title= element_text(size=12,color='black',hjust=0.39,face = "bold"),
+        axis.line = element_line(size=0, colour = "black"),
+        axis.ticks = element_line(size=1, colour = "black"),
+        axis.text.y = element_text(hjust = 0,size=16,color='black',face = "bold"),
+        axis.text.x = element_text(hjust = 0.5,size=16,color='black',face = "bold"),
+        axis.title = element_text(size=10,color='black',face = "bold"),
+        panel.background = element_rect(fill = "grey100"),
+        panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+        legend.title = element_text(size=14,color='black',hjust=0.5, face = "bold"),
+        legend.text = element_text(size=14,color='black',face = "bold"),
+        legend.position = 'right',
+        panel.grid.major = element_blank())
+ggsave('figures/defense_trait_scatterplot.png', width = 10, height = 8, dpi = 300)
+```
+
+# Test phylogenetic signal
+
+Tree is based on Microcystis core genes from the pangenome (Kiledal et al., 2024, Harmful Algae). We extract the Lake Erie strains used in this study and plot the defense traits on the tree. The tree is rooted with Microcystis_wesenbergii_Mw_QC_B_20070930_S4D. 
+
+## Extract tree
+
+```{r}
+# Load tree and metadata
+core_gene_tree <- treeio::read.newick(file="inputs/core_gene_alignment_filtered.aln.treefile")
+color_map <- read_tsv('inputs/color_map.tsv')
+
+# Select LE strains from the tree
+LE_strains <- color_map %>%
+  ## get Microcystis_aeruginosa_LG13-03 as the out-group
+  filter(Marvin_choice == TRUE | tip.label == 'Microcystis_aeruginosa_LG13-03') %>%
+  select(old, tip.label,hex_col)
+
+# Check how representative these strains are calde-wise in the big tree
+clades_LE <- color_map %>%
+  filter(Marvin_choice == TRUE) %>%
+  group_by(group) %>%
+  summarise(n = n())
+
+print(paste('The proportion of LE clades spanning across the 180 Microcysits strains: ',length(unique(clades_LE$group))/length(unique(color_map$group))))
+
+# Get LE strains from tree
+LE_tree <- drop.tip(core_gene_tree, setdiff(core_gene_tree$tip.label, LE_strains$tip.label))
+# Change some of the tip labels because they are wrong
+LE_tree[['tip.label']] <- gsub('LE18-131', 'LE19-131', LE_tree[['tip.label']])
+LE_tree[['tip.label']] <- gsub('Microcystis_aeruginosa_LE3', 'LE3', LE_tree[['tip.label']])
+LE_tree[['tip.label']] <- gsub('Microcystis_aeruginosa_LG13-03', 'LG13-03', LE_tree[['tip.label']])
+# Output tree
+write.tree(LE_tree, file = 'inputs/LE_core_genome_aln.tree')
+
+# Check differences between trait data and tree tip label
+setdiff(LE_tree$tip.label, defense_clade_info$Strain)
+
+# Get rid of LE19-55 & LE19-22 because there is no trait data
+LE_tree <- drop.tip(LE_tree, 'LE19-55')
+LE_tree <- drop.tip(LE_tree, 'LE18-22')
+# reroot the tree to the outgroup LG13-03
+LE_tree <- root(LE_tree, outgroup = 'LG13-03', resolve.root = TRUE)
+# Get phylogenetic distances between strains
+phylo_dist <- cophenetic.phylo(LE_tree)
+```
+
+## Map trait onto the tree
+
+```{r}
+## update outgroup to clade info
+clade_info <- clade_info %>%
+  add_row(Strain = 'LG13-03', Clade = 'Mae10')
+
+tree_trait <- defense_clade_info %>%
+  select(Strain, Unpalatability, Inhibition) %>%
+  column_to_rownames('Strain') %>%
+  mutate(across(everything(), ~scale(.) %>% as.vector())) %>%
+  rownames_to_column('Strain') %>%
+  add_row(Strain = 'LG13-03', Unpalatability = NA, Inhibition = NA) %>%
+  pivot_longer(cols = c('Unpalatability', 'Inhibition'), names_to = 'Trait', values_to = 'Value')
+
+## plot tree with ggtree
+tree_plot <- ggtree(LE_tree) + 
+  theme_tree2()  
+  #geom_tiplab(size = 2, align=T, offset = 0.005, linetype = 'dashed', linesize = 0.5)
+
+tree_plot <- tree_plot %<+% 
+  clade_info + 
+  geom_tippoint(aes(color=Clade), size= 5) +
+  scale_color_manual(values = c('sienna2', 'lightblue2','lightgoldenrodyellow','grey60',
+                                 'lightpink4','plum3','palegreen4','lightblue4','black')) +
+  theme(axis.line = element_line(size=1, colour = "black"),
+        axis.ticks = element_line(size=1, colour = "black"),
+        axis.text = element_text(size=10,color='black',face = "bold"),
+        legend.text = element_text(size=12,color='black'),
+        legend.title = element_text(size=12,color='black',face = "bold", hjust=0.5),
+        legend.position = "right") 
+ggsave('figures/defense_trait_phylo_tree.png', width = 6, height = 8, dpi = 300)
+tree_plot
+```
+
+```{r}
+# reorder strain based on the tree tip label
+tip_order <- get_taxa_name(tree_plot)
+tree_trait$Strain <- factor(tree_trait$Strain, levels = rev(tip_order))
+
+trait_plot <- ggplot(tree_trait, aes(x = Trait, y = Strain, fill = Value)) +
+  geom_tile() +
+  scale_fill_gradient2(low = "skyblue4", mid = "white", high = "darkgoldenrod3", na.value = 'white') +
+  scale_y_discrete() +
+  labs(title = "Defense Traits",x = NULL, y = NULL, fill = "Scaled Trait Value") +
+  theme_bw()+
+  theme(plot.title= element_text(size=15,color='black',hjust=0.6,face = "bold"),
+        axis.line = element_line(size=0, colour = "black"),
+        axis.ticks = element_line(size=1, colour = "black"),
+        axis.text.y = element_text(hjust = 0,size=15,color='black',face = "bold"),
+        axis.text.x = element_text(size = 12,angle = 45, hjust=1,color='black', face = "bold"),
+        axis.title = element_text(size=12,color='black',face = "bold"),
+        panel.background = element_rect(fill = "grey100"),
+        panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+        legend.title = element_text(size=10,color='black',hjust=0.5, face = "bold"),
+        legend.position = 'right',
+        panel.grid.major = element_blank())
+ggsave('figures/defense_trait_heatmap.png',trait_plot, width = 4, height = 9, dpi = 300)
+trait_plot
+```
+```{r}
+full_plot <- trait_plot %>% insert_left(tree_plot, width = 2)
+ggsave('figures/defense_trait_phylo_heatmap.png', full_plot, width = 12, height = 8, dpi = 300)
+full_plot
+
+
+```
+## Test for Phylogenentic Signal
+
+```{r}
+lambda_tree_trait <-defense_clade_info %>%
+  select(Strain, Unpalatability, Inhibition) %>%
+  column_to_rownames('Strain')
+
+lambda_LE_tree <- drop.tip(LE_tree, 'LG13-03')
+
+
+lambda_results <- list()
+
+for (trait in colnames(lambda_tree_trait)) {
+  lambda <- phylosig(lambda_LE_tree, lambda_tree_trait[[trait]], method = "lambda", test = TRUE)
+  lambda_results[[trait]] <- lambda
+}
+
+lambda_results_df <- do.call(rbind, lapply(lambda_results, function(x) {
+  data.frame(lambda = x$lambda, logL = x$logL, P = x$P)
+}))
+lambda_results_df <- lambda_results_df %>% rownames_to_column(var = 'Traits')
+
+write.table(lambda_results_df, file = "output_tables/phylogenetic_signal_lambda_trait_results.tsv", sep = "\t", quote = FALSE, row.names = FALSE)
+print(lambda_results_df)
+
+```
+
