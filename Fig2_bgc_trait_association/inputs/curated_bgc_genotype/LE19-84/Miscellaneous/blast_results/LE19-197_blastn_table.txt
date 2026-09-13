@@ -1,0 +1,3 @@
+Query_Name	Reference_Name	Identity_Score	Query_Coverage	Query_Length
+FMDALA_05445|LE19-84	KBOODB_07645	91.94	95.02	261
+FMDALA_23545|LE19-84	KBOODB_21165	94.37	94.67	75

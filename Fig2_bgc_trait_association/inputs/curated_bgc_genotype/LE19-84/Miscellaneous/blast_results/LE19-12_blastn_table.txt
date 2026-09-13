@@ -1,0 +1,3 @@
+Query_Name	Reference_Name	Identity_Score	Query_Coverage	Query_Length
+FMDALA_05445|LE19-84	GMBOIL_11935	91.94	95.02	261
+FMDALA_23545|LE19-84	Unmatched	0.0	0.0	0

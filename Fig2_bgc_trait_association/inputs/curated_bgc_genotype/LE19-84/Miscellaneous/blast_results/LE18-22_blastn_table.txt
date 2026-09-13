@@ -1,0 +1,3 @@
+Query_Name	Reference_Name	Identity_Score	Query_Coverage	Query_Length
+FMDALA_23545|LE19-84	HENFNN_23390	98.59	94.67	75
+FMDALA_05445|LE19-84	Unmatched	0.0	0.0	0

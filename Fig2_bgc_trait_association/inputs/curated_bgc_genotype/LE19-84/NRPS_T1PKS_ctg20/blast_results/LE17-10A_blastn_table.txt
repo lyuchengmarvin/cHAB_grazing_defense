@@ -1,0 +1,4 @@
+Query_Name	Reference_Name	Identity_Score	Query_Coverage	Query_Length
+FMDALA_16780|LE19-84	ALDGEK_07160	97.01	99.73	738
+FMDALA_16790|LE19-84	Unmatched	0.0	0.0	0
+FMDALA_16795|LE19-84	Unmatched	0.0	0.0	0

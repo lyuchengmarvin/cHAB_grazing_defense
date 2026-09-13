@@ -1,0 +1,14 @@
+Query_Name	Reference_Name	Identity_Score	Query_Coverage	Query_Length
+FMDALA_00045|LE19-84	Unmatched	0.0	0.0	0
+FMDALA_00050|LE19-84	Unmatched	0.0	0.0	0
+FMDALA_00055|LE19-84	Unmatched	0.0	0.0	0
+FMDALA_00060|LE19-84	Unmatched	0.0	0.0	0
+FMDALA_00065|LE19-84	Unmatched	0.0	0.0	0
+FMDALA_00075|LE19-84	Unmatched	0.0	0.0	0
+FMDALA_00080|LE19-84	Unmatched	0.0	0.0	0
+FMDALA_00085|LE19-84	Unmatched	0.0	0.0	0
+FMDALA_00090|LE19-84	Unmatched	0.0	0.0	0
+FMDALA_00095|LE19-84	Unmatched	0.0	0.0	0
+FMDALA_00100|LE19-84	Unmatched	0.0	0.0	0
+FMDALA_00105|LE19-84	Unmatched	0.0	0.0	0
+FMDALA_00110|LE19-84	Unmatched	0.0	0.0	0

@@ -1,0 +1,6 @@
+Query_Name	Reference_Name	Identity_Score	Query_Coverage	Query_Length
+GMBOIL_16325|LE19-12	Unmatched	0.0	0.0	0
+GMBOIL_16330|LE19-12	Unmatched	0.0	0.0	0
+GMBOIL_16335|LE19-12	Unmatched	0.0	0.0	0
+GMBOIL_16880|LE19-12	Unmatched	0.0	0.0	0
+GMBOIL_16885|LE19-12	Unmatched	0.0	0.0	0
