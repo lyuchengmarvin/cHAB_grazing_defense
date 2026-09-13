@@ -1,0 +1,142 @@
+---
+title: "Pull genes from pangenomes"
+output: html_notebook
+---
+
+```{r setup, include=FALSE, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+source("pull_seqeunce_functions.R")
+```
+
+Load *Microcystis* pangenome (Kiledal et al. 2024) and extract single-copy core genes of four reference strains.
+
+```{r, message=FALSE, warning=FALSE}
+## Load pangenome (gene presence/absence table)
+pangenome_table <- readr::read_csv("~/Desktop/LE_annotation/gene_presence_absence_roary.csv")
+## Get core genes from the pangenome
+core_genes <- pangenome_table %>%
+  # keep the genes shared by almost all strains. Kiledal et al. (2024) used 90% as the threshold to account for reference incompleteness. But, we want to get the most representative ones
+  filter(`No. isolates` > (ncol(pangenome_table)-14)*0.98) %>%
+  # keep single-copy core genes
+  filter(`Avg sequences per isolate` == 1)
+## Output core gene list
+write.csv(core_genes, file = "Microcystis_core_genes.csv", row.names = FALSE, quote = FALSE)
+
+print("Core gene criteria: shared by at least 98% of the isolates and single-copy core genes")
+print(paste("Number of core genes in the pangenome:", nrow(core_genes)))
+```
+
+For the analysis of *LE genomes*, we want to pull sequences of the genes shared by the LE strains.
+
+```{r, message=FALSE, warning=FALSE}
+cols_to_keep <- c("Gene","Annotation", grep('LE',names(pangenome_table), value = TRUE))
+
+## Compile the LE pangenome table
+LE_pangenome <- pangenome_table %>% 
+  dplyr::select(all_of(cols_to_keep)) %>%
+  select(-c(`Microcystis_aeruginosa_LE13-04`,`Microcystis_wesenbergii_LE013-01`)) %>%
+  # Create a new column with the number of LE isolates carrying the gene
+  mutate(`No. LE isolates` = rowSums(!is.na(select(., matches('LE'))))) %>%
+  #keep only the genes shared by at least two isolates
+  filter(`No. LE isolates` >= 2)
+
+write.table(LE_pangenome, file = "LE_pangenome.tsv", quote = FALSE, sep = "\t", row.names = FALSE)
+
+## Convert the pangenome to a numerical format
+gene_pre_absence <- LE_pangenome %>%
+  select(-c(Gene,Annotation, `No. LE isolates`)) %>%
+  # replace text with 1 and NA with 0 except for 
+  mutate_all(~ifelse(is.na(.),0,1)) %>%
+  mutate(Gene = LE_pangenome$Gene,.before = 1)
+
+write.table(gene_pre_absence, file = "LE_gene_presence_absence_roary.txt", quote = FALSE, sep = "\t", row.names = FALSE)
+
+print(paste("Number of genes in the LE pangenome:", nrow(LE_pangenome),",shared by at least 2 strains"))
+```
+
+Pull LE pangenome
+
+```{r}
+## Prepare the pangenome table
+LE_pangenome_seqs <- LE_pangenome %>%
+  select(-c(`No. LE isolates`, `Annotation`)) %>%
+  pull_seq_from_pangenome(.,path_gene_anno = "~/Desktop/LE_annotation/bakta/")
+## Write the sequences to fasta files
+write_sequences(LE_pangenome_seqs, output_dir = "~/Desktop/LE_annotation/pangenome_sequences/")
+```
+# Retrieve core gene seqeunces.
+
+```{r}
+refstrains <- core_genes %>%
+  select(matches('LE19-84')) %>%
+  colnames()
+# Initiate core gene sequence retrieval for each reference strain
+for (st in refstrains){
+  ## Prepare the pangenome table 
+  st_core_genes <- core_genes  %>%
+    select(`Gene`,`st`)%>%
+    filter(`st` != "") %>%
+    pull_seq_from_pangenome(.,path_gene_anno ="~/Desktop/LE_annotation/bakta/")
+  ## Write the sequences to fasta files
+  write_sequences(st_core_genes, 
+                  output_dir =paste0("~/Desktop/LE_annotation/",st,"_core_genes/"))
+}
+```
+
+# Concatenate all core genes to one core gene fasta file
+
+```{command-line, eval=FALSE}
+cat ~/Desktop/LE_annotation/Microcystis_aeruginosa_BS13-10_core_genes/*.fasta > Microcystis_aeruginosa_BS13-10_core_genes.fasta
+```
+
+## Legacy code
+
+```{r, include=FALSE}
+pangenome_table_metag <- readr::read_csv("gene_presence_absence_roary.csv")
+
+cols_to_keep <- c("Gene","Annotation","No. isolates",grep('LE',names(pangenome_table), value = TRUE))
+
+cols_to_remove <- pangenome_table_metag %>% 
+  dplyr::select(`Non-unique Gene name`:`Avg group size nuc`) %>% 
+  colnames()
+
+genes_of_intertest = data.frame(
+  Gene = c("mcyB","mcyA"),
+  gene_name_not_from_panaroo = c("mcyB", "mcyA")
+)
+
+mcy_gene_list_metag <- pangenome_table_metag %>% 
+  dplyr::select(all_of(cols_to_keep)) %>%
+  filter(Gene %in% genes_of_intertest$Gene) %>% 
+  pivot_longer(Gene,names_to = "genome",values_to = "gene_name") %>% 
+  left_join(genes_of_intertest) %>% 
+  filter(!is.na(gene_name)) %>% 
+  separate_longer_delim(gene_name, delim = ";") %>% 
+  mutate(genes_fasta = str_glue("bakta/{genome}.ffn"),
+         annotation_files_exist = fs::file_exists(genes_fasta))
+
+#fasta <- mcy_gene_list$genes_fasta[1]
+#gene <- mcy_gene_list$gene_name[1]
+
+retreive_sequence <- function(fasta, gene){
+  seqs <- Biostrings::readDNAStringSet(fasta) %>% 
+    data.frame(seq = ., seq_name = names(.)) %>% 
+    unglue::unglue_unnest(seq_name, patterns = "{gene_name} {gene_annotation}") %>% 
+    filter(gene_name == gene)
+}
+
+
+mcy_seqs <- map2_dfr(mcy_gene_list$genes_fasta, mcy_gene_list$gene_name,retreive_sequence,.progress=TRUE)
+
+mcy_seqs_w_new_headers <- mcy_seqs %>% 
+  left_join(mcy_gene_list) %>% 
+  mutate(new_fasta_header = str_glue("{gene_name_not_from_panaroo} | {genome}"))
+
+mcy_seqs_w_new_headers$seq %>% 
+  `names<-`(mcy_seqs_w_new_headers$new_fasta_header) %>% 
+  Biostrings::DNAStringSet() %>% 
+  Biostrings::writeXStringSet("/tmp/mcye_seqs.fasta")
+
+```
+

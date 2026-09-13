@@ -1,0 +1,3 @@
+"term","estimate","std.error","statistic","p.value","conf.low","conf.high","Outcome","Significant","effect_cat","Ref_genotype","Gen_metric"
+"Core Genes",-88.9219420885549,25.750127145927,-3.45326225321649,0.00266316548236864,-142.817577609052,-35.0263065680573,"Log Inhibition","Stronger defense","Strong effect","LE19-114","Shared gene ANI"
+"Core Genes",-95.3478167706583,24.5101671003623,-3.89013328143523,0.000984752970399155,-146.648186089284,-44.0474474520328,"Unpalatability","Stronger defense","Strong effect","LE19-114","Shared gene ANI"

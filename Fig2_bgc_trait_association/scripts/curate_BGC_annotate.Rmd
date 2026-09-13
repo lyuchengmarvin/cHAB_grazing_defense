@@ -1,0 +1,107 @@
+---
+title: "curate_BGC_annotation.Rmd"
+author: "Yu-Cheng Lin"
+date: "2025-09-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+source('pull_sequences.R')
+```
+
+# Curating BGC Annotation Results
+
+This script is designed to curate the annotation results of Biosynthetic Gene Clusters (BGCs) obtained from antiSMASH and Lauren Hart's curated database. The goal is to integrate both results.
+
+```{r}
+# Set parameter
+strain <- 'LE19-84'
+blast_dir <- 'blast_result/'
+lauren_db_blast_file <- paste0(blast_dir, strain, '_lauren_blastn_table.csv')
+antiSMASH_blast_file <- paste0(blast_dir, strain, '_antiSMASH_blastn_table.csv')
+summary_table_file <- paste0(blast_dir, strain, '_bgc_annotation_combined.txt')
+# Output sequence type
+seq_type <- '_cds_from_genomic.fna' # or .ffn
+```
+
+
+```{r load_data}
+# Load BGC keys for Lauren's databse
+bgc_key <- read.csv('BGCdb_seed5_key.csv', header = TRUE) %>%
+  select(Header, Main_Product, Biosynthetic_Class, Organism, Gene, New_BGC_name,
+         gene_type, pos_in_bgc, core_genes, genes_in_bgc)
+# Load annotation results and combine them
+bgc_lauren <- read.csv(lauren_db_blast_file, header= T) %>%
+  # because there will be multiple hits due to fragmented genes, caused by contig breaks, we need to get the ones that has the highest query coverage of the same hit.
+  group_by(Reference_Name) %>%
+  slice_max(order_by = Query_Coverage, n = 1, with_ties = FALSE) %>%
+  filter(Reference_Name!='Unmatched')
+bgc_anti <- read.csv(antiSMASH_blast_file, header= T) %>%
+  # because there will be multiple hits due to fragmented genes, caused by contig breaks, we need to get the ones that has the highest query coverage of the same hit.
+  group_by(Reference_Name) %>%
+  slice_max(order_by = Query_Coverage, n = 1, with_ties = FALSE) %>%
+  filter(Reference_Name!='Unmatched')
+
+bgc_annot <- bgc_lauren %>%
+  full_join(bgc_anti, by = c('Query_Name'), suffix = c('_lauren','_antiSMASH')) %>%
+  unglue::unglue_unnest(Query_Name, patterns = "{Query_gene_name} {Query_gene_annotation}") %>% 
+  select(Query_gene_name, Query_gene_annotation, starts_with('Reference_Name')) %>%
+  mutate(Not_in_Lauren = ifelse(is.na(Reference_Name_lauren), TRUE, FALSE),
+         Not_in_antiSMASH = ifelse(is.na(Reference_Name_antiSMASH), TRUE, FALSE),
+         Both_match = ifelse(!Not_in_Lauren & !Not_in_antiSMASH, TRUE, FALSE)) %>%
+  left_join(bgc_key, by = c('Reference_Name_lauren' = 'Header'))
+
+write.table(bgc_annot, summary_table_file, sep = '\t', quote = FALSE, row.names = FALSE)
+```
+
+These are the genes annotated to be involved in biosynthesis of secondary metabolites. Some genes are annotated by both databases, some only by one of them. Lauren's database is focused on the core genes in each BGC, while antiSMASH make de novo predictions of the entire cluster, often including non-core genes. But, I still want to keep this information because it tells us structural information about the BGCs in that particular genome. Therefore, I will use Lauren's database as the foundation of known clusters and their core genes. And, I will incorporate antiSMASH results to add more information to these known clusters.
+
+# Pull sequences and output
+
+I will use the annotation from Lauren_db as the core genes for a given BGC, and throw in gene sequences predicted by antiSMASH only as additional. So, I will output three fasta files for a given genome:
+
+1.Lauren_db core genes only
+2.antiSMASH additional genes
+3.Lauren_db core genes + antiSMASH additional genes
+
+```{r}
+# define function to retrieve sequences from prodrigal gene fasta files
+path_gene_anno = '~/Desktop/LE_annotation/bakta/'
+# Compile fasta file paths
+gene_table <- bgc_annot  %>%
+  mutate(genes_fasta = paste0(path_gene_anno,strain,seq_type)) %>%
+  # Check if the fasta files exist
+  mutate(annotation_files_exist = fs::file_exists(genes_fasta)) %>%
+  select(Query_gene_name, genes_fasta, New_BGC_name, annotation_files_exist,
+         Not_in_Lauren, Not_in_antiSMASH, Both_match)
+# Retrieve sequences
+seqs <- pull_sequences(gene_table)
+# Write sequences to fasta files
+## 1. Lauren_db core genes only
+bgc_class <- unique(seqs$New_BGC_name[!seqs$Not_in_Lauren])
+for (bgc in bgc_class) {
+  write_sequences(subset(seqs, !Not_in_Lauren & New_BGC_name == bgc),
+                  output_dir = paste0('curated_BGC_sequences/',
+                                      strain,'/Lauren_db/',bgc,'/'),
+                  write_individual_fastas = TRUE)
+}
+write_sequences(subset(seqs, !Not_in_Lauren),
+                output_dir = paste0('curated_BGC_sequences/',strain,'/Lauren_db/'),
+                output_file = paste0(strain,'_Lauren_db_core_genes.fasta'),
+                write_individual_fastas = FALSE)
+## 2. antiSMASH additional genes
+write_sequences(subset(seqs, Not_in_Lauren & !Not_in_antiSMASH),
+                output_dir = paste0('curated_BGC_sequences/',strain,'/antiSMASH_additional/'),
+                write_individual_fastas = TRUE)
+## 3. Lauren_db core genes + antiSMASH additional genes
+write_sequences(seqs,
+                output_dir = paste0('curated_BGC_sequences/',strain,'/'),
+                output_file = paste0(strain,'_combined_core_additional_genes.fasta'),
+                write_individual_fastas = FALSE)
+```
+
+
+

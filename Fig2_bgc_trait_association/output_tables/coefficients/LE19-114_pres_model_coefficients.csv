@@ -1,0 +1,8 @@
+"term","estimate","std.error","statistic","p.value","conf.low","conf.high","Outcome","Significant","effect_cat","Ref_genotype","Gen_metric"
+"Anabaenopeptin",-2.44342581105582,1.10460001591992,-2.21204578656548,0.0409419588590472,-4.7739281319186,-0.112923490193047,"Log Inhibition","Stronger defense","Small effect","LE19-114","Gene content conservation"
+"1-Heptadecene",-2.39055934347454,1.26778496334253,-1.88561894374563,0.076554041473847,-5.06535180847745,0.284233121528376,"Log Inhibition","No significant effect","Small effect","LE19-114","Gene content conservation"
+"Core Genes",0.782250743476807,3.70148459483185,0.211334323684344,0.835139121495379,-7.02719911580948,8.59170060276309,"Log Inhibition","No significant effect","Small effect","LE19-114","Gene content conservation"
+"Anabaenopeptin",-5.17325539034604,1.50923986584113,-3.4277224630976,0.00345216431806749,-8.37270097973861,-1.97380980095346,"Unpalatability","Stronger defense","Small effect","LE19-114","Gene content conservation"
+"Cyanobactin (ctg13)",-21.0999968646803,12.9905296535982,-1.62425993607088,0.123854114971635,-48.6386895170339,6.43869578767334,"Unpalatability","No significant effect","Strong effect","LE19-114","Gene content conservation"
+"Lanthipeptide (ctg3)",2.38493713456499,1.4812736311896,1.61005845533729,0.126934758021806,-0.755222685790549,5.52509695492053,"Unpalatability","No significant effect","Small effect","LE19-114","Gene content conservation"
+"Core Genes",18.9541615311379,13.7048320134909,1.38302764400757,0.18565381135965,-10.0987844791986,48.0071075414744,"Unpalatability","No significant effect","Small effect","LE19-114","Gene content conservation"
