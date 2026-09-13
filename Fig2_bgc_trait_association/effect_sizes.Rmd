@@ -1,0 +1,531 @@
+---
+title: "figS9_effect_sizes"
+author: "Yu-Cheng Lin"
+date: "2026-02-08"
+output: html_document
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(tidyverse)
+library(ggpubr)
+library(circlize)
+library(car)
+library(broom)
+source('scripts/parse_functions.R')
+```
+
+
+# Defense trait
+
+Load defense trait data
+
+```{r}
+# Trait data summary from dreissinid mussel feeding experiments
+raw_defense_trait <- read.table('inputs/LE_QMF_23_IDM_trait_summary.out.txt', header = T, sep = '\t')
+defense_trait <- raw_defense_trait%>%
+  mutate(Strain = str_extract(Culture, '^[^.]+')) %>%
+  mutate(Strain = gsub('_', '-', Strain)) %>%
+  mutate(Strain = case_when(
+    Strain == 'LE17-10' ~ 'LE17-10A',
+    Strain == 'LE17-20' ~ 'LE17-20C',
+    Strain == 'LE19-282' ~ 'LE19-281',
+    Strain == 'LE18-13' ~ 'LE19-13',
+    TRUE ~ Strain
+  ))  %>%
+  # Add back the pseudofeces information
+  mutate(pseudofeces = case_when(
+      Strain %in% c('LE19-197', 'LE19-196','LE19-59') ~ 'yes',
+      TRUE ~ 'no'
+    )) %>%
+  # These strains were flagged as mixed culture by the Dick lab (source), so their trait might change over time.
+  mutate(contamination = case_when(
+    Strain %in% c('LE19-12', 'LE19-59') ~ 'yes',
+    TRUE ~ 'no'
+  )) %>%
+  mutate(
+    # The amount of Microcystis ingested relative to the preferred food in the mixed treatment
+    Unpalatability = as.numeric(blugrn_mix_avg_FI / grn_mix_avg_FI),
+    # Total amount phytoplankton ingested in the mixed treatment
+    Inhibition = as.numeric(total_chla_mix_avg_FI)) %>%
+  select(Strain, pseudofeces, contamination, Unpalatability, Inhibition, blugrn_mix_avg_FI, grn_mix_avg_FI)
+
+# Genome metadata
+clade_info <- read.table('inputs/genome_metadata.txt', header = T, sep='\t') %>%
+  mutate(Strain = case_when(
+    Strain == 'LE17-10' ~ 'LE17-10A',
+    Strain == 'LE17-20' ~ 'LE17-20C',
+    Strain == 'LE19-282' ~ 'LE19-281',
+    Strain == 'LE18-13' ~ 'LE19-13',
+    TRUE ~ Strain
+  )) %>%
+  select(Strain, Clade) 
+
+defense_clade_info <- defense_trait %>%
+  left_join(clade_info, by = 'Strain') %>%
+  select(Strain, Clade, Unpalatability, Inhibition, pseudofeces, contamination)
+```
+
+```{r}
+ggplot(defense_clade_info) +
+  geom_point(aes(x = Unpalatability, y = Inhibition, fill = Clade, shape = pseudofeces),size = 8, color = "grey30") +
+  #The standard FI rate for green algae is 34, which is the average FI of the green alga in the control treatment acclimated to chlamy-only culture in 2025.
+  geom_hline(yintercept = 34, color = 'grey30',linetype = 'dashed') +
+  annotate("text", x = 0.73, y = 36, hjust = 0,
+           label = "Grazing rate \non the preferred food", 
+           size = 5, color = "grey10", angle = 0) +
+  geom_vline(xintercept = 1, color = 'grey30',linetype = 'dotted') +
+  annotate("text", x = 0.95, y = -1.2 , hjust = 0, 
+           label = expression("Equal preference \nfor both food sources"), 
+           size = 5, color = "grey10", angle = 90) +
+  ggrepel::geom_text_repel(aes(label = Strain,x = Unpalatability, y = Inhibition), max.overlaps = 20,size = 2, alpha = 0.8,fontface = 'bold', show.legend = F) +
+  scale_fill_manual(values = c('sienna2', 'lightblue2','lightgoldenrodyellow','grey60',
+                                 'lightpink4','plum3','palegreen3','lightblue4'),name = expression(bolditalic("Microcystis")~bold("clade"))) +
+  scale_shape_manual(values = c(21, 23), name = expression(bold("Expelled food (pseudofeces)"))) +
+  #scale_shape_manual(values = c(21, 23), name = 'Non-dissolvable Pseudofeces') +
+  guides(fill = guide_legend(override.aes = list(shape = 21))) +
+  labs(title = 'Microcystis Grazing Defense Traits',
+       x = 'Mussel selectivity for Microcystis \n (Microcystis : Preferred food)',
+       y = 'Total amount of phytoplankton ingested \n (ml/mg AFDW/hr)') +
+  theme_pubclean()+
+  theme(plot.title= element_text(size=12,color='black',hjust=0.39,face = "bold"),
+        axis.line = element_line(size=0, colour = "black"),
+        axis.ticks = element_line(size=1, colour = "black"),
+        axis.text.y = element_text(hjust = 0,size=16,color='black',face = "bold"),
+        axis.text.x = element_text(hjust = 0.5,size=16,color='black',face = "bold"),
+        axis.title = element_text(size=10,color='black',face = "bold"),
+        panel.background = element_rect(fill = "grey100"),
+        panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+        legend.title = element_text(size=14,color='black',hjust=0.5, face = "bold"),
+        legend.text = element_text(size=14,color='black',face = "bold"),
+        legend.position = 'right',
+        panel.grid.major = element_blank())
+```
+
+# Quantify the effect size of the DAPC-identified BGCs
+
+We wanted to quantify how much the DAPC-identified BGCs contributed to defense relative to each other with a multiple linear regression analysis. Since each *Microcystis* strain has their own unique combination of BGCs, we adopted a targeted approach by using the BGC sequences from one strain as the reference.
+
+## Load reference BGC sequences
+
+The genetic distance to the reference sequence of each BGC is an independent variable whereas the phenotypic value is the dependent variable. To control for the effect of shared evolutionary history, we included a variable of genetic distance based on Microcystis single-copy core genes. The single-copy core genes are shared by at least 98% of the public *Microcystis* pangenome (n = 183; Kiledal et al., 2024).
+
+Loading reference BGC sequences
+
+```{r}
+## Each of the vector contains BGC sequences from one strain as the reference. 
+
+### Inhibitory strains
+target_clusters_114 <- c("MicroviridinB", "Anabaenopeptin_ctg105","1_heptadecene_ctg44", "Cyanobactin_ctg13", "Cyanobactin_ctg39", "Lanthipeptide_ctg3", "Lanthipeptide_ctg83", "LAP_ctg5","Novel_T3PKS_ctg30", "coregenes")
+target_clusters_12 <- c("1_heptadecene_ctg44","MicroviridinB","Anabaenopeptin_ctg105","Novel_T3PKS_ctg30", "NRPS_like_ctg36","Cyanobactin_ctg13", "Cyanobactin_ctg39", "Cyanopeptolin", "Lanthipeptide_ctg3", "Lanthipeptide_ctg83", "LAP_ctg5","RiPP_like_ctg28","coregenes")
+target_clusters_84 <- c("1_heptadecene_ctg44","Anabaenopeptin_ctg105","Cyanobactin_ctg13", "Cyanobactin_ctg39","Lanthipeptide_ctg3","Lanthipeptide_ctg83","LAP_ctg5","Novel_T3PKS_ctg30","NRPS_like_ctg36","NRPS_T1PKS_ctg20","Microcystin_LR","Micropeptin_K139","coregenes")
+
+### Unpalatable strains
+target_clusters_195 <- c("1_heptadecene_ctg44","MicroviridinB","Anabaenopeptin_ctg105", "Cyanobactin_ctg13","Cyanobactin_ctg39","Lanthipeptide_ctg3","Lanthipeptide_ctg83", "Lanthipeptide_ctg83","LAP_ctg5","Novel_T3PKS_ctg30","NRPS_like_ctg36","coregenes")
+
+all_clusters <- unique(c(target_clusters_114, target_clusters_12, target_clusters_84, target_clusters_195))
+## Assign one reference strain
+target_clusters <- target_clusters_195
+# Get the blast results files
+ref_genotype <- 'LE19-195'
+```
+
+Get genetic distance to the reference BGC sequences. This is done by blasting the BGC sequences of each strain against the reference BGC sequences. The results are summarized in the `targets_summary.txt` file, which contains the sequence identity of each BGC sequence to the reference sequence. The sequence identity is used as a measure of genetic distance.
+
+```{r, message=FALSE}
+bgc_blast_results <- file.path('inputs/curated_bgc_genotype',ref_genotype)
+## list all directories under the bgc_blast_results
+bgc_dirs <- list.dirs(bgc_blast_results, recursive = FALSE) %>%
+  .[!grepl('miscallaneous',.)] # exclude the fragmented and not well-defined bgcs
+## find all blast result files under each directory
+bgc_seqidt_files <- unlist(lapply(bgc_dirs, function(dir) {
+  list.files(file.path(dir,'blast_results/'), pattern = 'targets_summary.txt', full.names = TRUE)
+}))
+
+# Get core gene blast results
+core_blast_results <- file.path('inputs/reference_core_genes',ref_genotype,'blast_results/')
+core_seqidt_files <- list.files(core_blast_results, pattern = 'targets_summary.txt', full.names = TRUE)
+
+# Combine the BGC and core gene blast results
+seqidt_files <- c(bgc_seqidt_files, core_seqidt_files)
+gene_names <- gsub(paste0(ref_genotype,'_|_targets_summary.txt'), '', basename(seqidt_files))
+```
+
+Compute distance matrix for each BGC and core gene. 
+
+```{r}
+# Load sequence identity data for each BGC and core gene
+seq_sim_list = list()
+
+for (clusters in seq_along(seqidt_files)){
+  cluster_name <- basename(seqidt_files[clusters]) %>%
+    str_extract('(?<=_).*(?=_targets_summary.txt)')
+  seq_idt_table <- read_seq_identity(seqidt_files[clusters]) %>%
+    select(Strain, ANI, Percent_presence) %>%
+    mutate(cluster = cluster_name)
+  seq_sim_list[[clusters]] <- seq_idt_table
+}
+
+seq_sim_table <- bind_rows(seq_sim_list) %>%
+  pivot_longer(cols = c(ANI, Percent_presence), names_to = 'Seq_Metric', values_to = 'Value') %>%
+  drop_na()
+
+# tidy up the cluster names
+seq_sim_table <- seq_sim_table %>%
+  mutate(cluster = case_when(
+    cluster == 'coregenes' ~ 'Core Genes',
+    cluster == '1_heptadecene_ctg44' ~ '1-Heptadecene',
+    cluster == 'Anabaenopeptin_ctg105' ~ 'Anabaenopeptin',
+    cluster == 'Cyanobactin_ctg13' ~ 'Cyanobactin (ctg13)',
+    cluster == 'Cyanobactin_ctg39' ~ 'Cyanobactin (ctg39)',
+    cluster == 'Lanthipeptide_ctg3' ~ 'Lanthipeptide (ctg3)',
+    cluster == 'Lanthipeptide_ctg83' ~ 'Lanthipeptide (ctg83)',
+    cluster == 'LAP_ctg5' ~ 'LAP (ctg5)',
+    cluster == 'Novel_T3PKS_ctg30' ~ 'Novel-T3PKS (ctg30)',
+    cluster == 'NRPS_like_ctg36' ~ 'NRPS-like (ctg36)',
+    cluster == 'NRPS_T1PKS_ctg20' ~ 'NRPS-T1PKS (ctg20)',
+    cluster == 'Microcystin_LR' ~ 'Microcystin',
+    cluster == 'Micropeptin_K139' ~ 'Micropeptin',
+    cluster == 'MicroviridinB' ~ 'Microviridin',
+    cluster == 'RiPP_like_ctg28' ~ 'RiPP-like (ctg28)',
+    TRUE ~ cluster
+  ))
+clean_cluster_names <- as.data.frame(target_clusters) %>%
+  mutate(target_clusters = case_when(
+    target_clusters == 'coregenes' ~ 'Core Genes',
+    target_clusters == '1_heptadecene_ctg44' ~ '1-Heptadecene',
+    target_clusters == 'Anabaenopeptin_ctg105' ~ 'Anabaenopeptin',
+    target_clusters == 'Cyanobactin_ctg13' ~ 'Cyanobactin (ctg13)',
+    target_clusters == 'Cyanobactin_ctg39' ~ 'Cyanobactin (ctg39)',
+    target_clusters == 'Lanthipeptide_ctg3' ~ 'Lanthipeptide (ctg3)',
+    target_clusters == 'Lanthipeptide_ctg83' ~ 'Lanthipeptide (ctg83)',
+    target_clusters == 'LAP_ctg5' ~ 'LAP (ctg5)',
+    target_clusters == 'Novel_T3PKS_ctg30' ~ 'Novel-T3PKS (ctg30)',
+    target_clusters == 'NRPS_like_ctg36' ~ 'NRPS-like (ctg36)',
+    target_clusters == 'NRPS_T1PKS_ctg20' ~ 'NRPS-T1PKS (ctg20)',
+    target_clusters == 'Microcystin_LR' ~ 'Microcystin',
+    target_clusters == 'Micropeptin_K139' ~ 'Micropeptin',
+    target_clusters == 'MicroviridinB' ~ 'Microviridin',
+    target_clusters == 'RiPP_like_ctg28' ~ 'RiPP-like (ctg28)',
+    TRUE ~ target_clusters
+  )) %>%
+  pull()
+```
+
+```{r}
+## Genetic distance matrix 1: Average nucleotide identity (ANI) among shared genes to the reference BGC sequences
+ANI_dis_table <- seq_sim_table %>%
+  filter(Seq_Metric == 'ANI') %>%
+  select(Strain, cluster, Value) %>%
+  pivot_wider(names_from = cluster, values_from = Value) %>%
+  left_join(defense_clade_info, by = 'Strain')%>%
+  drop_na()
+
+## Genetic distance matrix 2: Percentage of the reference BGC genes present in each strain
+pres_dis_table <- seq_sim_table %>%
+  filter(Seq_Metric == 'Percent_presence') %>%
+  select(Strain, cluster, Value) %>%
+  pivot_wider(names_from = cluster, values_from = Value) %>%
+  left_join(defense_clade_info, by = 'Strain') %>%
+  drop_na()
+```
+
+## Multiple Linear Regression Analysis
+
+### Genetic predictor: ANI
+
+Data transformation to meet assumptions
+
+```{r}
+# Prepare the data for multivariate multiple regression
+mvlm_ani_table <- ANI_dis_table %>% 
+  mutate(log_inhib = log(Inhibition)) %>%
+  # scale both outcomes so that the prediction results can be comparable
+  mutate(std_unpal = scale(Unpalatability), std_log_inhib = scale(log_inhib)) %>%
+  select(all_of(clean_cluster_names),std_unpal,std_log_inhib)
+sample_size <- nrow(mvlm_ani_table)
+```
+
+#### Model comparisons and MLRs
+
+```{r}
+## Perform step-wise selection
+# BIC-based method given small sample size
+ani_model_inhib <- lm(std_log_inhib ~ ., data = mvlm_ani_table %>% select(-std_unpal) )
+ani_model_unpal <- lm(std_unpal ~ ., data = mvlm_ani_table %>% select(-std_log_inhib) )
+## stepwise regression for model selection
+step_model_ani_inhib <- step(ani_model_inhib, direction = "both", scope = list(lower = ~ `Core Genes`), k = log(sample_size))
+step_model_ani_unpal <- step(ani_model_unpal, direction = "both", scope = list(lower = ~ `Core Genes`), k = log(sample_size))
+summary(step_model_ani_inhib); hist(step_model_ani_inhib$residuals); shapiro.test(step_model_ani_inhib$residuals)
+summary(step_model_ani_unpal); hist(step_model_ani_unpal$residuals); shapiro.test(step_model_ani_unpal$residuals)
+```
+
+#### Assumption check
+
+```{r}
+
+plot(step_model_ani_inhib, which = 1, main = "Trait: Inhibition") # Residuals vs Fitted
+plot(step_model_ani_inhib, which = 2, main = "Trait: Inhibition") # Normal Q-Q
+plot(step_model_ani_unpal, which = 1, main = "Trait: Unpalatability") # Residuals vs Fitted)
+plot(step_model_ani_unpal, which = 2, main = "Trait: Unpalatability") # Normal Q-Q
+
+```
+
+#### Record model fit
+
+```{r}
+ani_model_annotations <- bind_rows(
+  broom::glance(step_model_ani_inhib) %>% mutate(Outcome = "Log Inhibition"),
+  broom::glance(step_model_ani_unpal) %>% mutate(Outcome = "Unpalatability")
+) %>%
+  mutate(Gen_metric = "Shared gene ANI") %>%
+  mutate(
+    annotation = paste0(
+      "Adj. R² = ", round(adj.r.squared, 3), "\n",
+      "F(", df, ",", df.residual, ") = ", round(statistic, 2), "\n",
+      case_when(
+        p.value < 0.001 ~ "p < 0.001 ***",
+        p.value < 0.01 ~ paste0("p = ", round(p.value, 3), " **"),
+        p.value < 0.05 ~ paste0("p = ", round(p.value, 3), " *"),
+        p.value < 0.1 ~ paste0("p = ", round(p.value, 3), " ."),
+        TRUE ~ paste0("   p = ", round(p.value, 3))
+      )
+    )
+  )
+```
+
+#### Reporting coefficients and forest plot
+
+```{r}
+# Get bootstrap confidence intervals for the stepwise model
+tidy_inhib <- tidy(step_model_ani_inhib, conf.int = TRUE) %>%
+  mutate(Outcome = "Log Inhibition")
+tidy_unpal <- tidy(step_model_ani_unpal, conf.int = TRUE) %>%
+  mutate(Outcome = "Unpalatability")
+
+combined_ani_boot <- bind_rows(tidy_inhib,tidy_unpal) %>%
+  filter(term != "(Intercept)") %>%
+  mutate(Significant = case_when(
+    conf.low > 0 ~ "Reduced defense",
+    conf.high < 0 ~ "Stronger defense",
+    TRUE ~ "No significant effect"
+  ),
+  term = gsub("`", "", term),
+  term = gsub("std_", "", term),
+  effect_cat = case_when(
+    abs(estimate) > 20 ~ "Strong effect",
+    abs(estimate) <= 20 ~ "Small effect",
+  ),
+  Ref_genotype = ref_genotype,
+  Gen_metric = "Shared gene ANI"
+)
+write.csv(combined_ani_boot, paste0("output_tables/coefficients/",ref_genotype,"_ani_model_coefficients.csv"), row.names = FALSE)
+```
+
+### Genetic predictor: Gene content conservation
+
+Data transformation to meet assumptions
+
+```{r}
+# Prepare the data for multivariate multiple regression
+mvlm_pres_table <- pres_dis_table %>% 
+  mutate(log_inhib = log(Inhibition)) %>%
+  # scale both outcomes so that the prediction results can be comparable
+  mutate(std_unpal = scale(Unpalatability), std_log_inhib = scale(log_inhib)) %>%
+  select(all_of(clean_cluster_names),std_unpal,std_log_inhib)
+sample_size <- nrow(mvlm_pres_table)
+```
+
+#### Model comparisons and MLRs
+
+```{r}
+## Perform step-wise selection
+# BIC-based method given small sample size
+pres_model_inhib <- lm(std_log_inhib ~ ., data = mvlm_pres_table %>% select(-std_unpal) )
+pres_model_unpal <- lm(std_unpal ~ ., data = mvlm_pres_table %>% select(-std_log_inhib) )
+## stepwise regression for model selection
+step_model_pres_inhib <- step(pres_model_inhib, direction = "both", scope = list(lower = ~ `Core Genes`), k = log(sample_size))
+step_model_pres_unpal <- step(pres_model_unpal, direction = "both", scope = list(lower = ~ `Core Genes`), k = log(sample_size))
+summary(step_model_pres_inhib); hist(step_model_pres_inhib$residuals); shapiro.test(step_model_pres_inhib$residuals)
+summary(step_model_pres_unpal); hist(step_model_pres_unpal$residuals); shapiro.test(step_model_pres_unpal$residuals)
+```
+
+#### Assumption check
+
+```{r}
+
+plot(step_model_pres_inhib, which = 1, main = "Trait: Inhibition") # Residuals vs Fitted
+plot(step_model_pres_inhib, which = 2, main = "Trait: Inhibition") # Normal Q-Q
+plot(step_model_pres_unpal, which = 1, main = "Trait: Unpalatability") # Residuals vs Fitted)
+plot(step_model_pres_unpal, which = 2, main = "Trait: Unpalatability") # Normal Q-Q
+
+```
+
+#### Record model fit
+
+```{r}
+pres_model_annotations <- bind_rows(
+  broom::glance(step_model_pres_inhib) %>% mutate(Outcome = "Log Inhibition"),
+  broom::glance(step_model_pres_unpal) %>% mutate(Outcome = "Unpalatability")
+) %>%
+  mutate(Gen_metric = "Gene content conservation") %>%
+  mutate(
+    annotation = paste0(
+      "Adj. R² = ", round(adj.r.squared, 3), "\n",
+      "F(", df, ",", df.residual, ") = ", round(statistic, 2), "\n",
+      case_when(
+        p.value < 0.001 ~ "p < 0.001 ***",
+        p.value < 0.01 ~ paste0("p = ", round(p.value, 3), " **"),
+        p.value < 0.05 ~ paste0("p = ", round(p.value, 3), " *"),
+        p.value < 0.1 ~ paste0("p = ", round(p.value, 3), " ."),
+        TRUE ~ paste0("  p = ", round(p.value, 3))
+      )
+    )
+  )
+```
+
+#### Reporting coefficients and forest plot
+
+```{r}
+# Get bootstrap confidence intervals for the stepwise model
+tidy_inhib <- tidy(step_model_pres_inhib, conf.int = TRUE) %>%
+  mutate(Outcome = "Log Inhibition")
+tidy_unpal <- tidy(step_model_pres_unpal, conf.int = TRUE) %>%
+  mutate(Outcome = "Unpalatability")
+
+combined_pres_boot <- bind_rows(tidy_inhib,tidy_unpal) %>%
+  filter(term != "(Intercept)") %>%
+  mutate(Significant = case_when(
+    conf.low > 0 ~ "Reduced defense",
+    conf.high < 0 ~ "Stronger defense",
+    TRUE ~ "No significant effect"
+  ),
+  term = gsub("`", "", term),
+  term = gsub("std_", "", term),
+  effect_cat = case_when(
+    abs(estimate) > 20 ~ "Strong effect",
+    abs(estimate) <= 20 ~ "Small effect",
+  ),
+  Ref_genotype = ref_genotype,
+  Gen_metric = "Gene content conservation"
+)
+write.csv(combined_pres_boot, paste0("output_tables/coefficients/",ref_genotype,"_pres_model_coefficients.csv"), row.names = FALSE)
+```
+
+# Plot the effect sizes of the BGCs identified by DAPC
+
+```{r}
+forest_table <- bind_rows(combined_ani_boot, combined_pres_boot) %>%
+  mutate(Gen_metric = factor(Gen_metric, levels = c("Shared gene ANI", "Gene content conservation")))
+
+annotation_table <- bind_rows(ani_model_annotations, pres_model_annotations)
+```
+
+## Inhibition
+
+```{r}
+## forest plot of the model coefficients for both outcomes
+ggplot(forest_table %>%
+         filter(Outcome =="Log Inhibition") ,
+       aes(x = estimate, y = reorder(term, estimate), color = Significant)) +
+  geom_point(position = position_dodge(width = 0.6), size = 3) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray") +
+  geom_errorbarh(
+    aes(xmin = conf.low, xmax = conf.high),
+    position = position_dodge(width = 0.6),
+    height = 0.3
+  ) +
+  scale_color_manual(values = c("Reduced defense" = "indianred", 
+                                "Stronger defense" = "steelblue", 
+                                "No significant effect" = "gray")) +
+  geom_text(
+    data = annotation_table %>%
+      filter(Outcome == "Log Inhibition"),
+    aes(x = Inf, y = Inf, label = annotation),
+    inherit.aes = FALSE,
+    vjust = 8,
+    hjust = 1.2,
+    size = 2.5,
+    color = "black"
+  ) +
+  facet_wrap(~ Gen_metric, scales = "free_x") +
+  labs(
+    title    = "Response variable: Inhibition",
+    x        = "Effect size (95% CI)",
+    y        = "Biosynthetic Gene Cluster",
+    color    = "Direction of Effect"
+  ) +
+  theme_pubclean()+
+  theme(plot.title= element_text(size=12,color='black',hjust=0.5,face = "bold"),
+        axis.line = element_line(linewidth=0, colour = "black"),
+        axis.ticks = element_line(size=1, colour = "black"),
+        axis.text.y = element_text(hjust = 0,size=10,color='black',face = "bold"),
+        axis.text.x = element_text(hjust = 0.5,size=10,color='black',face = "bold"),
+        axis.title = element_text(size=12,color='black',face = "bold"),
+        axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0)),
+        strip.text = element_text(size = 12, color = 'black',face = "bold"),
+        strip.background = element_rect(fill = "grey100", 
+                                        color = NA, linewidth = 1),
+        panel.background = element_rect(fill = "grey100"),
+        panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+        legend.title = element_text(size=12,color='black',hjust=0, face = "bold"),
+        legend.text = element_text(size=10,color='black',hjust=0),
+        legend.position = 'right',
+        panel.grid.major = element_blank())
+ggsave(paste0("output_tables/forest_plots/",ref_genotype,"_inhibition_model_coefficients_forest_plot.png"), width = 10, height = 4)
+```
+
+## Unpalatability
+
+```{r}
+## forest plot of the model coefficients for both outcomes
+ggplot(forest_table %>%
+         filter(Outcome =="Unpalatability") ,
+       aes(x = estimate, y = reorder(term, estimate), color = Significant)) +
+  geom_point(position = position_dodge(width = 0.6), size = 3) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray") +
+  geom_errorbarh(
+    aes(xmin = conf.low, xmax = conf.high),
+    position = position_dodge(width = 0.6),
+    height = 0.3
+  ) +
+  scale_color_manual(values = c("Reduced defense" = "indianred", 
+                                "Stronger defense" = "steelblue", 
+                                "No significant effect" = "gray")) +
+  geom_text(
+    data = annotation_table %>%
+      filter(Outcome == "Unpalatability"),
+    aes(x = Inf, y = Inf, label = annotation),
+    inherit.aes = FALSE,
+    vjust = 8,
+    hjust = 1.2,
+    size = 2.5,
+    color = "black"
+  ) +
+  facet_wrap(~ Gen_metric, scales = "free_x") +
+  labs(
+    title    = "Response variable: Unpalatability",
+    x        = "Effect size (95% CI)",
+    y        = "Biosynthetic Gene Cluster",
+    color    = "Direction of Effect"
+  ) +
+  theme_pubclean()+
+  theme(plot.title= element_text(size=12,color='black',hjust=0.5,face = "bold"),
+        axis.line = element_line(linewidth=0, colour = "black"),
+        axis.ticks = element_line(size=1, colour = "black"),
+        axis.text.y = element_text(hjust = 0,size=10,color='black',face = "bold"),
+        axis.text.x = element_text(hjust = 0.5,size=10,color='black',face = "bold"),
+        axis.title = element_text(size=12,color='black',face = "bold"),
+        axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0)),
+        strip.text = element_text(size = 12, color = 'black',face = "bold"),
+        strip.background = element_rect(fill = "grey100", 
+                                        color = NA, linewidth = 1),
+        panel.background = element_rect(fill = "grey100"),
+        panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+        legend.title = element_text(size=12,color='black',hjust=0, face = "bold"),
+        legend.text = element_text(size=10,color='black',hjust=0),
+        legend.position = 'right',
+        panel.grid.major = element_blank())
+ggsave(paste0("output_tables/forest_plots/",ref_genotype,"_unpalatability_model_coefficients_forest_plot.png"), width = 10, height = 4)
+```
