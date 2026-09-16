@@ -414,9 +414,10 @@ metaG_fp_downstream <- metaG_fp_clean %>%
          crypto_prime = if_else(blugrn < 0, crypto + abs(min(blugrn)) + 0.0000001, crypto),
          total_prime = if_else(blugrn < 0, total + abs(min(blugrn)) + 0.0000001, total)) %>%
   ungroup() %>%
-  # FI on diatom and yellow substances are prone to inflation because of very low abundance.
+  # FI on diatom are prone to inflation because of very low abundance.
   # selectivity is calculated here as the ratio between bluegreen and total chlorophyll-a instead of bluegreen versus all other food because the latter can be easily inflated by low FI on other food categories.
-  mutate(selectivity_blugrn = blugrn_prime / (total_prime))
+  mutate(selectivity_blugrn = blugrn_prime / (total_prime)) %>%
+  mutate(tselect_blugrn = blugrn_prime / (grn_prime + diatom_prime + crypto_prime))
 
 ```
 
@@ -475,8 +476,8 @@ ggplot(mean_comm_traits, aes(x = `Mussel Selectivity`, y = `Mussel Total Feeding
   geom_errorbar(aes(xmin = `Mussel Selectivity` - select_se, xmax = `Mussel Selectivity` + select_se), 
                 height = 0.02, color = "grey30", lineend = "butt") +
   labs(title = "Community Defense Traits",
-       x = "Mussel selectivity for Cyanobacteria (Bluegreens : Total Chlorophyll-a)",
-       y = "Total volume of phytoplanktons ingested per mussel per hour") +
+       x = "Mussel selectivity for Cyanobacteria \n (Bluegreens : Total Chlorophyll-a)",
+       y = "Total volume of phytoplanktons \n ingested per mussel per hour") +
   ggrepel::geom_text_repel(aes(label = Timepoint), size = 3, color = "black", fontface = "bold") +
   theme_pubclean()+
   theme(plot.title= element_text(size=15,color='black',hjust=0.39,face = "bold"),
@@ -556,11 +557,53 @@ ggsave("figures/fig3A/comm_inhib_cyano_rel.png", width = 6, height = 4.5, dpi = 
 ```
 
 ```{r}
-#Inhibition_model <- lm(`Mussel Total Feeding Rate` ~ `Cyanobacteria abundance (%)`, data = comm_trait_rel_abund)
-#summary(Inhibition_model)
+Inhibition_model <- lm(`Mussel Total Feeding Rate` ~ `Cyanobacteria abundance (%)`, data = comm_trait_rel_abund)
+summary(Inhibition_model)
 
-#comm_trait_rel_abund$inhib_res <- Inhibition_model$residuals
-#plot(Inhibition_model$residuals)
+comm_trait_rel_abund$inhib_res <- Inhibition_model$residuals
+plot(Inhibition_model$residuals)
+```
+
+```{r}
+## Inhibition model residual and cyanobacterial abundance
+ggplot(comm_trait_rel_abund, aes(x = `Cyanobacteria abundance (%)`, y = inhib_res)) +
+  geom_point(aes(fill = `Lake System`, shape = Month),size = 3) +
+  geom_errorbar(aes(xmin = `Cyanobacteria abundance (%)` - cyanrelabund_se, 
+                    xmax = `Cyanobacteria abundance (%)` + cyanrelabund_se), 
+                height = 0.02, color = "grey30", lineend = "butt") +
+  scale_fill_manual(name = "Lake System", 
+                    values = c("2018 Lake Erie" = "peachpuff2", 
+                               "2019 Lake Erie" = "cyan4", 
+                               "2019 Lake Huron" = "lightpink4")) +
+  scale_shape_manual(name = "Month", 
+                     values = c("06" = 21, "07" = 22, 
+                                "08" = 23,"09" = 24, "10" = 25))+
+  guides(fill = guide_legend(override.aes = list(shape = 21)),
+         alpha = "none",
+         shape = guide_legend(override.aes = list(fill = "grey80"))) +
+  labs(title = NULL,
+       x = "Cyanobacteria abundance (%)",
+       y = "Residuals \n (Inhibition ~ cyanobacterial abundance)") +
+  ggrepel::geom_text_repel(aes(label = Timepoint), size = 3, color = "black", fontface = "bold") +
+  theme_pubclean()+
+    theme(plot.title= element_text(size=15,color='black',hjust=0.39,face = "bold"),
+          axis.line = element_line(linewidth=0, colour = "black"),
+          axis.ticks = element_line(size=1, colour = "black"),
+          axis.text.y = element_text(hjust = 0,size=10,color='black',face = "bold"),
+          axis.text.x = element_text(hjust = 1,vjust = 1,size=12,color='black',face = "bold", angle = 30),
+          axis.title = element_text(size=15,color='black',face = "bold"),
+          panel.background = element_blank(),
+          panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+          strip.background = element_rect(fill = "grey100", color = NULL, linewidth = 1.5),
+          strip.text.x.top = element_text(size=10,color='black',face = "bold"),
+          legend.title = element_text(size=10,color='black',hjust=0.5, face = "bold"),
+          legend.text = element_text(size = 10),
+          legend.box = "vertical",
+          legend.position = "right",
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank())
+#ggsave("figures/fig3A/comm_inhib_cyano_rel.png", width = 6, height = 4.5, dpi = 300)
+
 ```
 
 ```{r}
@@ -648,16 +691,17 @@ mean_clade_comp <- mcy_clade_comp %>%
 
 # Combine the summarized trait data and clade composition data
 trait_clade_table <- comm_trait_rel_abund %>%
-  select(Date, Month, Timepoint, `Lake System`, `Mussel Total Feeding Rate`,`Mussel Selectivity`) %>%
+  select(Date, Month, Timepoint, `Lake System`, `Mussel Total Feeding Rate`,`Mussel Selectivity`, inhib_res) %>%
   left_join(mean_clade_comp, by = "Date") %>%
   # Since higher feeding rate and selectivity indicate stronger defense, I will use negative values of these two traits to represent community defense level in the PCA analysis.
   mutate(Inhibition = -`Mussel Total Feeding Rate`,
-         Unpalatability = -`Mussel Selectivity`)
+         Unpalatability = -`Mussel Selectivity`,
+         Inhibition_residuals = -inhib_res)
 
 # Perform PCA on Microcystis clade composition and traits
 pca_result<- prcomp(trait_clade_table %>%
                       column_to_rownames(var = "Date") %>%
-                      select(-Month, -Timepoint, -`Lake System`,-`Mussel Total Feeding Rate`, -`Mussel Selectivity`), scale. = TRUE)
+                      select(-Month, -Timepoint, -`Lake System`,-`Mussel Total Feeding Rate`, -`Mussel Selectivity`, -inhib_res), scale. = TRUE)
 
 ## Extract PCA scores and combine with FI data
 pca_scores <- as.data.frame(pca_result$x) %>%
@@ -668,7 +712,7 @@ pca_scores <- as.data.frame(pca_result$x) %>%
 pca_loadings <- as.data.frame(pca_result$rotation) %>%
   rownames_to_column(var = "Clade") %>%
   mutate(seg_color  = case_when(
-    Clade %in% c("Inhibition","Unpalatability","Inhibition_res") ~ "Community defense traits",
+    Clade %in% c("Inhibition","Unpalatability","Inhibition_residuals") ~ "Community defense traits",
     Clade %in% c("Mae1", "Mae3_1","Mae3_3","Mae4","Mae5","Mae8","Mfl_ae1","Mfl_ae3") ~ "Laboratory-tested clades",
     TRUE ~ "Untested clades"
   ))
@@ -732,7 +776,8 @@ ggplot(pca_scores, aes(x = PC1, y = PC2)) +
           legend.title = element_text(size=10,color='black',hjust=0.5, face = "bold"),
           legend.position = 'right',
           panel.grid.major = element_blank())
-ggsave("figures/fig3B/metaG_clade_trait_PCA_biplot.png", width = 8, height = 6, dpi = 300)
+#ggsave("figures/fig3B/metaG_clade_trait_PCA_biplot.png", width = 8, height = 6, dpi = 300)
+ggsave("figures/fig3B/metaG_clade_trait_PCA_biplot_consider_cyano_abundance.png", width = 8, height = 6, dpi = 300)
 ```
 
 Since PC2 are describing the variation in community defense traits more than PC1, I will look at PC2 and PC3 to see if the separation between samples with different community defense traits is more clear.
@@ -793,8 +838,10 @@ ggplot(pca_scores, aes(x = PC2, y = PC3)) +
           legend.title = element_text(size=10,color='black',hjust=0.5, face = "bold"),
           legend.position = 'right',
           panel.grid.major = element_blank())
-ggsave("figures/fig3B/metaG_clade_trait_PCA23_biplot.png", width = 8, height = 6, dpi = 300)
+#ggsave("figures/fig3B/metaG_clade_trait_PCA23_biplot.png", width = 8, height = 6, dpi = 300)
+ggsave("figures/fig3B/metaG_clade_trait_PCA23_biplot_consider_cyano_abundance.png", width = 8, height = 6, dpi = 300)
 ```
+
 ```{r}
 # Plot PCA biplot
 ggplot(pca_scores, aes(x = PC3, y = PC4)) +
@@ -851,7 +898,8 @@ ggplot(pca_scores, aes(x = PC3, y = PC4)) +
           legend.title = element_text(size=10,color='black',hjust=0.5, face = "bold"),
           legend.position = 'right',
           panel.grid.major = element_blank())
-ggsave("figures/fig3B/metaG_clade_trait_PCA34_biplot.png", width = 6.5, height = 4.5, dpi = 300)
+#ggsave("figures/fig3B/metaG_clade_trait_PCA34_biplot.png", width = 6.5, height = 4.5, dpi = 300)
+ggsave("figures/fig3B/metaG_clade_trait_PCA34_biplot_consider_cyano_abundance.png", width = 8, height = 6, dpi = 300)
 ```
 
 ```{r}
