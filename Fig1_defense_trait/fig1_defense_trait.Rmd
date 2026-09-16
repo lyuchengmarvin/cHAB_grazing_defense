@@ -99,14 +99,14 @@ ggplot(defense_clade_info) +
   geom_ribbon(data = new_data, aes(x = Unpalatability, ymin = lower, ymax = upper), alpha = 0.2, fill = "grey80") +
   geom_line(data = new_data, aes(x = Unpalatability, y = predicted), color = "grey20", size = 1) +
   #The standard FI rate for green algae is 34, which is the average FI of the green alga in the control treatment acclimated to chlamy-only culture in 2025.
-  geom_hline(yintercept = 34, color = 'grey30',linetype = 'dashed') +
-  annotate("text", x = 0.73, y = 36, hjust = 0,
+  geom_hline(yintercept = 34, color = 'grey30',linetype = 'dashed',linewidth = 2) +
+  annotate("text", x = 0.65, y = 37, hjust = 0,
            label = "Grazing rate \non the preferred food", 
-           size = 5, color = "grey10", angle = 0) +
-  geom_vline(xintercept = 1, color = 'grey30',linetype = 'dotted') +
-  annotate("text", x = 0.95, y = -1.2 , hjust = 0, 
+           size = 6, color = "grey10", angle = 0) +
+  geom_vline(xintercept = 1, color = 'grey30',linetype = 'dotted',linewidth = 2) +
+  annotate("text", x = 0.93, y = -1.2 , hjust = 0, 
            label = expression("Equal preference \nfor both food sources"), 
-           size = 5, color = "grey10", angle = 90) +
+           size = 6, color = "grey10", angle = 90) +
   #ggrepel::geom_text_repel(aes(label = Strain,x = Unpalatability, y = Inhibition), max.overlaps = 20,size = 2, alpha = 0.8,fontface = 'bold', show.legend = F) +
   scale_fill_manual(values = c('sienna2', 'lightblue2','lightgoldenrodyellow','grey60',
                                  'lightpink4','plum3','palegreen3','lightblue4'),name = expression(bolditalic("Microcystis")~bold("clade"))) +
@@ -129,7 +129,7 @@ ggplot(defense_clade_info) +
         legend.text = element_text(size=14,color='black',face = "bold"),
         legend.position = 'right',
         panel.grid.major = element_blank())
-ggsave('figures/defense_trait_scatterplot.png', width = 10, height = 8, dpi = 300)
+ggsave('figures/defense_trait_scatterplot.png', width = 11, height = 8, dpi = 300)
 ```
 
 # Test phylogenetic signal
